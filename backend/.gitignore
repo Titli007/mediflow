@@ -1,0 +1,49 @@
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# Python caching
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Sensitive configuration files (MUST NOT BE COMMITTED)
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+medical_extraction.log
+logs/
+
+# Uploaded user medical documents
+uploads/
+uploads/medical_docs/
+
+# SQLite databases (local tests)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# IDE settings
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
