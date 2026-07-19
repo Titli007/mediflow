@@ -106,6 +106,46 @@ export const DashboardPage: React.FC = () => {
     fetchDashboardData();
   }, []);
 
+  // Background loop for real-time browser push notifications
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    
+    // Request permission if not already granted/prompted
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    const notifiedKeys = new Set<string>();
+
+    const checkInterval = setInterval(() => {
+      if (Notification.permission !== 'granted') return;
+      if (activeReminders.length === 0) return;
+
+      const now = new Date();
+      const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const todayDateStr = now.toDateString();
+
+      activeReminders.forEach((rem) => {
+        if (rem.reminder_time === currentHHMM) {
+          const key = `${rem.id}_${todayDateStr}_${rem.reminder_time}`;
+          if (!notifiedKeys.has(key)) {
+            notifiedKeys.add(key);
+            
+            // Trigger native HTML5 browser alert notification banner
+            new Notification("💊 MediFlow Medication Reminder", {
+              body: `It's time to take your dose: ${rem.title}. Frequency: ${rem.frequency}.`,
+              icon: '/favicon.svg',
+              tag: `med-${rem.id}`
+            });
+            console.log(`Push Notification triggered for reminder: ${rem.title}`);
+          }
+        }
+      });
+    }, 15000); // Check every 15 seconds
+
+    return () => clearInterval(checkInterval);
+  }, [activeReminders]);
+
   const handleSubmitBiometrics = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!logHeartRate && !logBloodGlucose && !logCholesterol) return;
@@ -750,13 +790,17 @@ export const DashboardPage: React.FC = () => {
             <Card variant="glass" className="p-6">
               <span className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Total Patient Compliance</span>
               <div className="flex items-baseline gap-2 mt-2">
-                <span className="text-4xl font-extrabold text-indigo-600">{journeyData.analytics.compliance_rate}%</span>
-                <span className="text-emerald-500 text-xs font-bold">↑ 2.4% vs cohort</span>
+                <span className="text-4xl font-extrabold text-indigo-600">
+                  {journeyData.analytics.compliance_rate !== null ? `${journeyData.analytics.compliance_rate}%` : 'No Data'}
+                </span>
+                {journeyData.analytics.compliance_rate !== null && (
+                  <span className="text-emerald-500 text-xs font-bold">↑ 2.4% vs cohort</span>
+                )}
               </div>
               <div className="w-full bg-slate-100 rounded-full h-2 mt-4 overflow-hidden border border-slate-200/50">
                 <div 
                   className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
-                  style={{ width: `${journeyData.analytics.compliance_rate}%` }}
+                  style={{ width: `${journeyData.analytics.compliance_rate || 0}%` }}
                 ></div>
               </div>
               <p className="text-[10px] text-slate-500 mt-2">Calculated from total medication dose logs completed relative to expectations.</p>
@@ -765,13 +809,17 @@ export const DashboardPage: React.FC = () => {
             <Card variant="glass" className="p-6">
               <span className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Missed Follow-up Rates</span>
               <div className="flex items-baseline gap-2 mt-2">
-                <span className="text-4xl font-extrabold text-indigo-600">{journeyData.analytics.missed_followup_rate}%</span>
-                <span className="text-rose-500 text-xs font-bold">↓ 0.8% missed</span>
+                <span className="text-4xl font-extrabold text-indigo-600">
+                  {journeyData.analytics.missed_followup_rate !== null ? `${journeyData.analytics.missed_followup_rate}%` : 'No Data'}
+                </span>
+                {journeyData.analytics.missed_followup_rate !== null && (
+                  <span className="text-rose-500 text-xs font-bold">↓ 0.8% missed</span>
+                )}
               </div>
               <div className="w-full bg-slate-100 rounded-full h-2 mt-4 overflow-hidden border border-slate-200/50">
                 <div 
                   className="bg-rose-500 h-full rounded-full transition-all duration-500" 
-                  style={{ width: `${journeyData.analytics.missed_followup_rate}%` }}
+                  style={{ width: `${journeyData.analytics.missed_followup_rate || 0}%` }}
                 ></div>
               </div>
               <p className="text-[10px] text-slate-500 mt-2">Calculated from total appointments cancelled relative to medical workflows.</p>
