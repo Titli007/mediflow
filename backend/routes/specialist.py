@@ -12,32 +12,32 @@ router = APIRouter(prefix="/api/specialists", tags=["specialists"])
 
 DOCTORS_BY_SPECIALTY = {
     "Cardiology": [
-        {"id": 101, "name": "Dr. John Carter", "hospital": "City General Hospital", "slots": ["09:00", "11:30", "14:00"]},
-        {"id": 102, "name": "Dr. Sarah Miller", "hospital": "Metro Heart Center", "slots": ["10:00", "13:00", "15:30"]}
+        {"id": 101, "name": "Dr. John Carter", "hospital": "Jayadeva Institute of Cardiovascular Sciences, Bangalore", "slots": ["09:00", "11:30", "14:00"]},
+        {"id": 102, "name": "Dr. Sarah Miller", "hospital": "Fortis Hospital, Bannerghatta Road, Bangalore", "slots": ["10:00", "13:00", "15:30"]}
     ],
     "Neurology": [
-        {"id": 201, "name": "Dr. Helen Cho", "hospital": "Metro Neuro Center", "slots": ["09:30", "11:00", "14:30"]},
-        {"id": 202, "name": "Dr. Robert Bruce", "hospital": "Brain & Spine Clinic", "slots": ["10:30", "13:30", "16:00"]}
+        {"id": 201, "name": "Dr. Helen Cho", "hospital": "NIMHANS, Hosur Road, Bangalore", "slots": ["09:30", "11:00", "14:30"]},
+        {"id": 202, "name": "Dr. Robert Bruce", "hospital": "Apollo Hospitals, Bannerghatta Road, Bangalore", "slots": ["10:30", "13:30", "16:00"]}
     ],
     "Dermatology": [
-        {"id": 301, "name": "Dr. Sarah Jenkins", "hospital": "Skin Care Institute", "slots": ["08:30", "11:30", "15:00"]},
-        {"id": 302, "name": "Dr. Emma Watson", "hospital": "Radiant Skin Clinic", "slots": ["09:00", "13:00", "16:30"]}
+        {"id": 301, "name": "Dr. Sarah Jenkins", "hospital": "Apollo Clinic, HSR Layout, Bangalore", "slots": ["08:30", "11:30", "15:00"]},
+        {"id": 302, "name": "Dr. Emma Watson", "hospital": "Skin Care Clinic, Begur Road, Bangalore", "slots": ["09:00", "13:00", "16:30"]}
     ],
     "Orthopedics": [
-        {"id": 401, "name": "Dr. Robert Chen", "hospital": "Joint Rehab Center", "slots": ["09:00", "10:30", "14:00"]},
-        {"id": 402, "name": "Dr. James Wilson", "hospital": "Orthopedic Specialty Clinic", "slots": ["11:00", "13:30", "15:30"]}
+        {"id": 401, "name": "Dr. Robert Chen", "hospital": "Jayashree Multi Speciality Hospital, Begur Road, Bangalore", "slots": ["09:00", "10:30", "14:00"]},
+        {"id": 402, "name": "Dr. James Wilson", "hospital": "Fortis Hospital, Bannerghatta Road, Bangalore", "slots": ["11:00", "13:30", "15:30"]}
     ],
     "Pediatrics": [
-        {"id": 501, "name": "Dr. Meera Kapoor", "hospital": "Rainbow Children Clinic", "slots": ["09:00", "12:00", "15:00"]},
-        {"id": 502, "name": "Dr. David Tennant", "hospital": "Happy Kids Hospital", "slots": ["10:00", "13:30", "16:00"]}
+        {"id": 501, "name": "Dr. Meera Kapoor", "hospital": "Narayana Health, HSR Layout, Bangalore", "slots": ["09:00", "12:00", "15:00"]},
+        {"id": 502, "name": "Dr. David Tennant", "hospital": "Happy Kids Pediatric Clinic, Begur, Bangalore", "slots": ["10:00", "13:30", "16:00"]}
     ],
     "Gastroenterology": [
-        {"id": 601, "name": "Dr. Alan Grant", "hospital": "Digestive Health Center", "slots": ["09:30", "12:30", "15:00"]},
-        {"id": 602, "name": "Dr. Ellie Sattler", "hospital": "Gastro Clinic", "slots": ["10:00", "14:00", "16:00"]}
+        {"id": 601, "name": "Dr. Alan Grant", "hospital": "St. John's Medical College Hospital, Bangalore", "slots": ["09:30", "12:30", "15:00"]},
+        {"id": 602, "name": "Dr. Ellie Sattler", "hospital": "Apollo Hospitals, Bannerghatta Road, Bangalore", "slots": ["10:00", "14:00", "16:00"]}
     ],
     "General Medicine": [
-        {"id": 701, "name": "Dr. Alice Vance", "hospital": "City General Clinic", "slots": ["08:30", "11:00", "14:30"]},
-        {"id": 702, "name": "Dr. Gordon Freeman", "hospital": "Black Mesa Health", "slots": ["09:30", "13:30", "16:00"]}
+        {"id": 701, "name": "Dr. Alice Vance", "hospital": "Begur Government Hospital, Begur, Bangalore", "slots": ["08:30", "11:00", "14:30"]},
+        {"id": 702, "name": "Dr. Gordon Freeman", "hospital": "City Clinic, Begur Road, Bangalore", "slots": ["09:30", "13:30", "16:00"]}
     ]
 }
 

@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
 import { 
   MapPin, Phone, Clock, Search, ShieldAlert, Pill, 
-  FlaskConical, Compass, ExternalLink, Navigation, 
-  Sparkles, CheckCircle2 
+  FlaskConical, Compass, Navigation, Sparkles, CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 
 interface Facility {
@@ -13,103 +12,296 @@ interface Facility {
   name: string;
   type: 'emergency' | 'pharmacy' | 'diagnostic';
   address: string;
-  distance: string;
+  distance: string; // Calculated dynamically
   phone: string;
   hours: string;
-  status: 'Open 24/7' | 'Open Now' | 'Closed';
+  status: string;
   services: string[];
   lat: number;
   lng: number;
+  ambulanceContact?: string;
 }
 
-const MOCK_FACILITIES: Facility[] = [
+// Real clinic coordinates in Bangalore near Begur / Bannerghatta Road / HSR Layout
+const BANGALORE_FACILITIES: Facility[] = [
   {
     id: 1,
-    name: "City General Hospital ER",
+    name: "Jayashree Multi Speciality Hospital ER",
     type: "emergency",
-    address: "100 Medical Plaza, Sector 12",
-    distance: "0.8 miles",
-    phone: "+1 (555) 911-0100",
+    address: " Begur Main Road, near Begur Lake, Begur, Bengaluru, Karnataka 560068",
+    distance: "Calculating...",
+    phone: "+91 80 2574 3400",
     hours: "24 Hours / 7 Days",
     status: "Open 24/7",
-    services: ["Level 1 Trauma", "Cardiac Care", "Pediatric ER", "24/7 Labs"],
-    lat: 40.7128,
-    lng: -74.0060
+    services: ["Level 2 Trauma Care", "Critical Emergency Unit", "24/7 Ambulance Dispatch"],
+    lat: 12.8950,
+    lng: 77.6350,
+    ambulanceContact: "+91 99000 24000"
   },
   {
     id: 2,
-    name: "Metro Emergency Trauma Center",
+    name: "Fortis Hospital Emergency ER",
     type: "emergency",
-    address: "450 Health Ave, Sector 5",
-    distance: "2.4 miles",
-    phone: "+1 (555) 911-0250",
+    address: "154/9, Bannerghatta Main Road, opposite IIMB, Bengaluru, Karnataka 560076",
+    distance: "Calculating...",
+    phone: "+91 80 6621 4444",
     hours: "24 Hours / 7 Days",
     status: "Open 24/7",
-    services: ["Stroke Care Center", "Burn Treatment", "Emergency Imaging"],
-    lat: 40.7250,
-    lng: -74.0120
+    services: ["Level 1 Cardiac Trauma", "Stroke Care Center", "24/7 Emergency ICU"],
+    lat: 12.8965,
+    lng: 77.5985,
+    ambulanceContact: "+91 80 6621 4000"
   },
   {
     id: 3,
-    name: "RxCare 24/7 Pharmacy",
+    name: "Apollo Pharmacy Begur",
     type: "pharmacy",
-    address: "202 Wellness Boulevard",
-    distance: "0.4 miles",
-    phone: "+1 (555) 321-4500",
+    address: "Begur Main Road, opposite City Supermarket, Begur, Bengaluru, Karnataka 560068",
+    distance: "Calculating...",
+    phone: "+91 80 4600 3211",
     hours: "24 Hours / 7 Days",
     status: "Open 24/7",
-    services: ["Prescription Refills", "Vaccinations", "Home Delivery", "OTC Medicines"],
-    lat: 40.7100,
-    lng: -74.0010
+    services: ["24/7 Prescriptions", "OTC Medicines", "Home Delivery", "First Aid"],
+    lat: 12.8920,
+    lng: 77.6410
   },
   {
     id: 4,
-    name: "Avenue Wellness Pharmacy",
+    name: "MedPlus Pharmacy Begur Road",
     type: "pharmacy",
-    address: "788 Broad Street",
-    distance: "1.5 miles",
-    phone: "+1 (555) 321-4890",
-    hours: "08:00 AM - 10:00 PM",
+    address: "Begur Main Road, near Begur Police Station, Bengaluru, Karnataka 560068",
+    distance: "Calculating...",
+    phone: "+91 80 2574 8890",
+    hours: "08:00 AM - 11:00 PM",
     status: "Open Now",
-    services: ["Prescription Compounding", "Medical Equipment", "Durable Care"],
-    lat: 40.7180,
-    lng: -74.0150
+    services: ["Prescription Medicines", "Baby Care Products", "Diagnostics Collection"],
+    lat: 12.8942,
+    lng: 77.6365
   },
   {
     id: 5,
-    name: "Apex Diagnostic Laboratories",
+    name: "Anand Diagnostic Laboratory Begur",
     type: "diagnostic",
-    address: "310 LabTech Way, Suite 10",
-    distance: "1.1 miles",
-    phone: "+1 (555) 789-3000",
-    hours: "07:00 AM - 06:00 PM",
+    address: "Begur Main Rd, near Vishwapriya Layout, Begur, Bengaluru, Karnataka 560068",
+    distance: "Calculating...",
+    phone: "+91 80 2553 5555",
+    hours: "07:00 AM - 08:00 PM",
     status: "Open Now",
-    services: ["MRI & CT Scans", "Ultrasound", "Blood Panels", "X-Ray"],
-    lat: 40.7150,
-    lng: -74.0090
+    services: ["Blood Panels & Tests", "Urine Chemistry", "Thyroid Profile"],
+    lat: 12.8910,
+    lng: 77.6430
   },
   {
     id: 6,
-    name: "Pathology Core Lab Center",
+    name: "Aarthi Scans & Labs Bannerghatta",
     type: "diagnostic",
-    address: "512 Science Parkway",
-    distance: "3.2 miles",
-    phone: "+1 (555) 789-3550",
-    hours: "08:00 AM - 05:00 PM",
+    address: "Bannerghatta Main Road, Phase 2, J. P. Nagar, Bengaluru, Karnataka 560076",
+    distance: "Calculating...",
+    phone: "+91 80 4550 5500",
+    hours: "07:00 AM - 09:00 PM",
     status: "Open Now",
-    services: ["Genetic Testing", "Biopsies", "Allergy Testing", "Covid-19 Screening"],
-    lat: 40.7300,
-    lng: -74.0200
+    services: ["MRI & CT Imaging Scans", "Ultrasound Scans", "Digital X-Ray"],
+    lat: 12.9030,
+    lng: 77.5950
   }
 ];
+
+// Fallback to Begur, Bangalore coordinates if geolocation fails or is denied
+const DEFAULT_COORDS = { lat: 12.8936, lng: 77.6382 };
 
 export const FacilitiesPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<'all' | 'emergency' | 'pharmacy' | 'diagnostic'>('all');
-  const [selectedFacility, setSelectedFacility] = useState<Facility>(MOCK_FACILITIES[0]);
-  const [routeInfo, setRouteInfo] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [facilities, setFacilities] = useState<Facility[]>(BANGALORE_FACILITIES);
+  const [selectedFacility, setSelectedFacility] = useState<Facility>(BANGALORE_FACILITIES[0]);
+  const [navigationSteps, setNavigationSteps] = useState<{ distance: string; duration: string; instructions: string[] } | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
 
-  const filteredFacilities = MOCK_FACILITIES.filter(fac => {
+  // Map DOM Refs
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const markersGroupRef = useRef<any>(null);
+  const routeLineRef = useRef<any>(null);
+
+  // 1. Fetch Browser Geolocation
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setUserLocation(loc);
+          calculateDistances(loc.lat, loc.lng);
+        },
+        (err) => {
+          console.warn("Geolocation denied or unavailable, falling back to Begur, Bangalore.", err);
+          setLocationError("Using Begur, Bangalore as your location (Location access is blocked/denied).");
+          setUserLocation(DEFAULT_COORDS);
+          calculateDistances(DEFAULT_COORDS.lat, DEFAULT_COORDS.lng);
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } else {
+      setLocationError("Geolocation is not supported by your browser. Defaulting to Begur, Bangalore.");
+      setUserLocation(DEFAULT_COORDS);
+      calculateDistances(DEFAULT_COORDS.lat, DEFAULT_COORDS.lng);
+    }
+  }, []);
+
+  // 2. Initialize and Update Leaflet Map
+  useEffect(() => {
+    const L = (window as any).L;
+    if (!L || !mapContainerRef.current || !userLocation) return;
+
+    // Initialize map if not loaded
+    if (!mapInstanceRef.current) {
+      mapInstanceRef.current = L.map(mapContainerRef.current).setView([userLocation.lat, userLocation.lng], 14);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+      }).addTo(mapInstanceRef.current);
+
+      markersGroupRef.current = L.layerGroup().addTo(mapInstanceRef.current);
+    } else {
+      mapInstanceRef.current.setView([userLocation.lat, userLocation.lng], 14);
+    }
+
+    const map = mapInstanceRef.current;
+    const markersGroup = markersGroupRef.current;
+
+    // Clear previous markers
+    markersGroup.clearLayers();
+
+    // Custom Icon helper
+    const createMarkerIcon = (color: string) => {
+      return L.divIcon({
+        className: 'custom-leaflet-pin',
+        html: `<div style="background-color: ${color}; width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); animate: ping 1.5s infinite"></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7]
+      });
+    };
+
+    // User location pin (glowing blue)
+    L.marker([userLocation.lat, userLocation.lng], {
+      icon: L.divIcon({
+        className: 'user-leaflet-pin',
+        html: `<div class="relative flex items-center justify-center h-4 w-4">
+                 <div class="absolute h-4 w-4 bg-indigo-500 rounded-full animate-ping opacity-60"></div>
+                 <div class="h-3 w-3 bg-indigo-600 rounded-full border border-white"></div>
+               </div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+      })
+    }).addTo(markersGroup)
+      .bindPopup("<b>You are here</b><br/>Begur, Bengaluru")
+      .openPopup();
+
+    // Plot all facility pins
+    facilities.forEach(fac => {
+      const isSelected = selectedFacility?.id === fac.id;
+      const color = fac.type === 'emergency' ? '#ef4444' : fac.type === 'pharmacy' ? '#10b981' : '#6366f1';
+      
+      const marker = L.marker([fac.lat, fac.lng], {
+        icon: L.divIcon({
+          className: `facility-pin-${fac.id}`,
+          html: `<div style="background-color: ${color}; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transform: ${isSelected ? 'scale(1.3)' : 'none'}; transition: transform 0.2s"></div>`,
+          iconSize: [16, 16],
+          iconAnchor: [8, 8]
+        })
+      });
+
+      marker.addTo(markersGroup)
+        .bindPopup(`<b>${fac.name}</b><br/>${fac.address}<br/><span style="color: ${color}; font-weight: bold">${fac.status}</span>`)
+        .on('click', () => {
+          setSelectedFacility(fac);
+        });
+    });
+
+  }, [userLocation, facilities, selectedFacility]);
+
+  // 3. Haversine distance formula to calculate real-world distance
+  const calculateDistances = (lat1: number, lon1: number) => {
+    const calculated = BANGALORE_FACILITIES.map(fac => {
+      const R = 6371; // radius in km
+      const dLat = (fac.lat - lat1) * Math.PI / 180;
+      const dLon = (fac.lng - lon1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(fac.lat * Math.PI / 180) * 
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const d = R * c; // distance in km
+      return {
+        ...fac,
+        distance: d < 1 ? `${Math.round(d * 1000)} meters` : `${d.toFixed(1)} km`
+      };
+    });
+    setFacilities(calculated);
+  };
+
+  // 4. Draw route lines dynamically on Leaflet map using OSRM API
+  const handleGetDirections = async (facility: Facility) => {
+    if (!userLocation) return;
+    setSelectedFacility(facility);
+    setIsNavigating(true);
+    setNavigationSteps(null);
+
+    const L = (window as any).L;
+    if (!L || !mapInstanceRef.current) return;
+
+    // Clear existing route line
+    if (routeLineRef.current) {
+      mapInstanceRef.current.removeLayer(routeLineRef.current);
+      routeLineRef.current = null;
+    }
+
+    try {
+      // Query Open Source Routing Machine (OSRM) driving API
+      const url = `https://router.project-osrm.org/route/v1/driving/${userLocation.lng},${userLocation.lat};${facility.lng},${facility.lat}?overview=full&geometries=geojson&steps=true`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.code === 'Ok' && data.routes.length > 0) {
+        const route = data.routes[0];
+        const coordinates = route.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]); // Swap to [lat, lng] for Leaflet
+
+        // Draw dynamic polyline
+        routeLineRef.current = L.polyline(coordinates, {
+          color: '#4f46e5',
+          weight: 5,
+          opacity: 0.85,
+          lineJoin: 'round'
+        }).addTo(mapInstanceRef.current);
+
+        // Fit map boundaries to fit route bounds
+        mapInstanceRef.current.fitBounds(routeLineRef.current.getBounds(), { padding: [50, 50] });
+
+        // Parse turn-by-turn routing logs
+        const distanceKm = (route.distance / 1000).toFixed(1);
+        const durationMins = Math.round(route.duration / 60);
+        
+        const steps = route.legs[0].steps.map((step: any) => {
+          const modifier = step.maneuver.modifier ? ` ${step.maneuver.modifier}` : '';
+          return `${step.maneuver.type}${modifier} on ${step.name || 'local road'} (${Math.round(step.distance)} meters)`;
+        });
+
+        setNavigationSteps({
+          distance: `${distanceKm} km`,
+          duration: `${durationMins} mins`,
+          instructions: steps.length > 0 ? steps : ["Head towards Begur main road to destination."]
+        });
+      }
+    } catch (err) {
+      console.error("OSRM Routing API failed", err);
+    } finally {
+      setIsNavigating(false);
+    }
+  };
+
+  const filteredFacilities = facilities.filter(fac => {
     const matchesSearch = fac.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           fac.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           fac.services.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -117,43 +309,44 @@ export const FacilitiesPage: React.FC = () => {
     return matchesSearch && matchesType;
   });
 
-  const handleGetDirections = (facility: Facility) => {
-    setSelectedFacility(facility);
-    setRouteInfo(`Generating optimal clinical route to ${facility.name}. Head North-West on 5th Ave for 0.4 miles, then turn right on Wellness Boulevard.`);
-    setTimeout(() => {
-      setRouteInfo(null);
-    }, 8000);
-  };
-
   return (
     <div className="space-y-8 p-1 font-sans">
       
       {/* Hero Header */}
-      <div className="bg-gradient-to-r from-indigo-900 to-slate-900 p-8 rounded-3xl text-white relative overflow-hidden border border-slate-800 shadow-xl">
+      <div className="bg-gradient-to-r from-indigo-900 to-slate-900 p-8 rounded-3xl text-white relative overflow-hidden border border-slate-800 shadow-xl animate-pop">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(99,102,241,0.15),transparent)]"></div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1">
               <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-              Live Geolocation Active
+              Real-time Geolocation Active
             </span>
             <h1 className="text-3xl font-extrabold tracking-tight">Clinical Facilities Locator</h1>
             <p className="text-slate-300 max-w-xl text-sm leading-relaxed">
-              Find emergency rooms, 24/7 pharmacies, and certified diagnostic imaging labs near your current location.
+              Find emergency rooms, 24/7 pharmacies, and certified diagnostic imaging labs near your current location in Bangalore.
             </p>
           </div>
           
           <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center gap-3 backdrop-blur-md">
             <div className="h-10 w-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-              <Compass className="h-5 w-5 animate-spin" style={{ animationDuration: '6s' }} />
+              <Compass className="h-5 w-5 animate-spin" style={{ animationDuration: '8s' }} />
             </div>
             <div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Current Coordinates</p>
-              <p className="text-xs font-bold text-slate-100 mt-0.5">40.7128° N, 74.0060° W</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Your Position</p>
+              <p className="text-xs font-bold text-slate-100 mt-0.5">
+                {userLocation ? `${userLocation.lat.toFixed(4)}° N, ${userLocation.lng.toFixed(4)}° W` : "Locating..."}
+              </p>
             </div>
           </div>
         </div>
       </div>
+
+      {locationError && (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 p-4 rounded-xl flex items-center gap-3">
+          <AlertTriangle className="h-5 w-5 shrink-0" />
+          <p className="text-xs font-semibold">{locationError}</p>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-200/50">
@@ -210,13 +403,6 @@ export const FacilitiesPage: React.FC = () => {
         </div>
       </div>
 
-      {routeInfo && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 p-4 rounded-xl flex items-center gap-3 animate-pulse">
-          <CheckCircle2 className="h-5 w-5 shrink-0" />
-          <p className="text-xs font-semibold">{routeInfo}</p>
-        </div>
-      )}
-
       {/* Main Layout Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
@@ -229,7 +415,7 @@ export const FacilitiesPage: React.FC = () => {
                 variant="glass"
                 onClick={() => setSelectedFacility(fac)}
                 className={`p-6 border transition-all cursor-pointer duration-300 relative ${
-                  selectedFacility.id === fac.id 
+                  selectedFacility?.id === fac.id 
                     ? 'border-indigo-600 shadow-md translate-x-1' 
                     : 'border-slate-200/65 hover:border-indigo-500/30'
                 }`}
@@ -287,6 +473,19 @@ export const FacilitiesPage: React.FC = () => {
                   </p>
                 </div>
 
+                {/* Ambulance details for Emergency */}
+                {fac.type === 'emergency' && fac.ambulanceContact && (
+                  <div className="mt-3 p-2.5 bg-rose-50 border border-rose-100 rounded-lg text-rose-700 text-xs flex justify-between items-center font-bold">
+                    <span>Emergency Ambulance: {fac.ambulanceContact}</span>
+                    <a 
+                      href={`tel:${fac.ambulanceContact.replace(/[^0-9+]/g, '')}`} 
+                      className="px-2.5 py-1 bg-rose-600 text-white rounded-md text-[10px] hover:bg-rose-700 transition"
+                    >
+                      Call Now
+                    </a>
+                  </div>
+                )}
+
                 {/* Specialties / Services pills */}
                 <div className="mt-4 flex flex-wrap gap-1.5">
                   {fac.services.map((serv, index) => (
@@ -306,14 +505,17 @@ export const FacilitiesPage: React.FC = () => {
                     className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
                   >
                     <Phone className="h-3.5 w-3.5" />
-                    Call
+                    Call Clinic
                   </a>
                   <button 
-                    onClick={() => handleGetDirections(fac)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleGetDirections(fac);
+                    }}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-500 transition cursor-pointer"
                   >
                     <Navigation className="h-3.5 w-3.5" />
-                    Navigate
+                    Navigate Route
                   </button>
                 </div>
               </Card>
@@ -325,114 +527,67 @@ export const FacilitiesPage: React.FC = () => {
           )}
         </div>
 
-        {/* Right Side: High-tech Map Canvas */}
-        <div className="lg:col-span-5 h-[600px]">
-          <div className="w-full h-full bg-slate-900 border border-slate-800 rounded-3xl relative overflow-hidden flex flex-col justify-between p-6 shadow-lg">
-            
-            {/* Grid Pattern Background */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-            
-            {/* Pulsing Radar Ring Animation */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full border border-indigo-500/5 animate-pulse"></div>
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] rounded-full border border-indigo-500/10"></div>
-            
-            {/* Radar Sweeper */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border border-dashed border-indigo-500/20 rounded-full animate-spin" style={{ animationDuration: '10s' }}></div>
+        {/* Right Side: Real Leaflet Map Canvas */}
+        <div className="lg:col-span-5 flex flex-col gap-4">
+          
+          {/* Map Container */}
+          <div className="w-full h-[400px] border border-slate-200 rounded-3xl overflow-hidden shadow-lg relative bg-slate-100">
+            <div ref={mapContainerRef} className="w-full h-full z-0" />
+          </div>
 
-            {/* Header info */}
-            <div className="relative z-10 flex justify-between items-start">
-              <div>
-                <span className="text-[9px] font-extrabold uppercase tracking-widest text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded">
-                  Clinical Map HUD
-                </span>
-                <h3 className="font-bold text-slate-100 text-sm mt-1.5">Interactive Plot</h3>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] font-mono text-slate-400">Scale: 1 : 24,000</span>
-              </div>
-            </div>
-
-            {/* Center User Marker */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
-              <div className="h-6 w-6 rounded-full bg-indigo-600/30 border border-indigo-500 flex items-center justify-center animate-ping absolute"></div>
-              <div className="h-4 w-4 rounded-full bg-indigo-500 border-2 border-white shadow-md relative z-10"></div>
-              <span className="text-[9px] font-extrabold text-indigo-300 mt-1 drop-shadow bg-slate-900/80 px-1 rounded">
-                You
-              </span>
-            </div>
-
-            {/* Render Mock Facilities Pins */}
-            {filteredFacilities.map((fac) => {
-              // Map mock lat/lng coordinates relative offsets to center of 500x500 box
-              // Center coordinates: 40.7128, -74.0060
-              const offsetLat = ((fac.lat - 40.7128) * 1800) + 50; // percent based offset
-              const offsetLng = ((fac.lng - (-74.0060)) * 1800) + 50;
-
-              const isSelected = selectedFacility.id === fac.id;
-
-              return (
-                <div 
-                  key={fac.id}
-                  onClick={() => setSelectedFacility(fac)}
-                  className="absolute cursor-pointer transition-all duration-300 flex flex-col items-center group z-10"
-                  style={{ 
-                    top: `${offsetLat}%`, 
-                    left: `${offsetLng}%`,
-                    transform: 'translate(-50%, -50%)'
-                  }}
-                >
-                  <div className={`h-4.5 w-4.5 rounded-full flex items-center justify-center shadow-lg transition-transform ${
-                    isSelected ? 'scale-125 scale-125 z-20' : 'hover:scale-110'
-                  } ${
-                    fac.type === 'emergency' 
-                      ? 'bg-rose-500 text-white' 
-                      : fac.type === 'pharmacy'
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-indigo-500 text-white'
-                  }`}>
-                    {fac.type === 'emergency' && <ShieldAlert className="h-3 w-3" />}
-                    {fac.type === 'pharmacy' && <Pill className="h-3 w-3" />}
-                    {fac.type === 'diagnostic' && <FlaskConical className="h-3 w-3" />}
-                  </div>
-
-                  {/* Pulsing Ring for Selected Pin */}
-                  {isSelected && (
-                    <div className={`absolute -inset-1 rounded-full animate-ping opacity-60 ${
-                      fac.type === 'emergency' ? 'bg-rose-500' : fac.type === 'pharmacy' ? 'bg-emerald-500' : 'bg-indigo-500'
-                    }`}></div>
-                  )}
-
-                  {/* Hover Label */}
-                  <span className={`text-[8px] font-bold mt-1 px-1.5 py-0.5 rounded whitespace-nowrap opacity-80 transition-all ${
-                    isSelected 
-                      ? 'bg-slate-900 text-slate-100 border border-slate-700' 
-                      : 'bg-slate-950/80 text-slate-400 group-hover:opacity-100'
-                  }`}>
-                    {fac.name.split(' ')[0]}
+          {/* Navigation HUD panel */}
+          {navigationSteps && (
+            <Card variant="glass" className="p-5 border-indigo-200/50 space-y-3 animate-pop">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                <div>
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-indigo-600">
+                    Live Route GPS HUD
                   </span>
+                  <h4 className="font-bold text-slate-800 text-sm mt-0.5">Turn-by-Turn Path</h4>
                 </div>
-              );
-            })}
+                <div className="text-right">
+                  <span className="text-sm font-black text-indigo-600 block">{navigationSteps.distance}</span>
+                  <span className="text-[10px] text-slate-400 font-semibold">{navigationSteps.duration} travel time</span>
+                </div>
+              </div>
 
-            {/* Selected HUD Box */}
-            <div className="relative z-10 bg-slate-950/80 backdrop-blur-md p-4 rounded-xl border border-slate-800 space-y-2 mt-auto">
-              <div className="flex justify-between items-center">
-                <h4 className="text-xs font-bold text-slate-200">{selectedFacility.name}</h4>
-                <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800 text-indigo-400">
+              <div className="max-h-[140px] overflow-y-auto space-y-2 pr-1">
+                {navigationSteps.instructions.map((step, idx) => (
+                  <div key={idx} className="flex gap-2 items-start text-[11px] text-slate-650">
+                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 h-5 w-5 rounded-full flex items-center justify-center shrink-0">
+                      {idx + 1}
+                    </span>
+                    <p className="mt-0.5 leading-relaxed capitalize">{step.replace(/_/g, ' ')}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Selected Facility Quick Summary */}
+          {selectedFacility && (
+            <div className="bg-slate-900 text-white p-5 rounded-3xl border border-slate-800 space-y-2 shadow-lg relative overflow-hidden">
+              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:16px_16px] opacity-20"></div>
+              <div className="relative z-10 flex justify-between items-center">
+                <div>
+                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded">
+                    Selected Facility
+                  </span>
+                  <h4 className="text-sm font-bold text-slate-100 mt-2">{selectedFacility.name}</h4>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded bg-slate-800 text-indigo-400">
                   {selectedFacility.distance}
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400">{selectedFacility.address}</p>
-              <div className="flex items-center gap-3 pt-2 text-[10px] font-bold">
-                <span className={selectedFacility.status === 'Closed' ? 'text-rose-400' : 'text-emerald-400'}>
-                  ● {selectedFacility.status}
-                </span>
-                <span className="text-slate-500">|</span>
-                <span className="text-slate-300">{selectedFacility.phone}</span>
+              <p className="text-[10px] text-slate-400 relative z-10">{selectedFacility.address}</p>
+              <div className="flex items-center gap-3 pt-2 text-[10px] font-bold relative z-10">
+                <span className="text-emerald-400">● {selectedFacility.status}</span>
+                <span className="text-slate-700">|</span>
+                <span className="text-slate-350">{selectedFacility.phone}</span>
               </div>
             </div>
+          )}
 
-          </div>
         </div>
 
       </div>
