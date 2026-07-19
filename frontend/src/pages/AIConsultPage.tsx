@@ -19,6 +19,79 @@ interface Message {
   text: string;
 }
 
+const parseBoldText = (text: string) => {
+  const parts = text.split('**');
+  return parts.map((part, i) => {
+    if (i % 2 === 1) {
+      return <strong key={i} className="font-bold text-slate-900">{part}</strong>;
+    }
+    
+    const italicParts = part.split('*');
+    if (italicParts.length > 1) {
+      return (
+        <React.Fragment key={i}>
+          {italicParts.map((subPart, j) => {
+            if (j % 2 === 1) {
+              return <em key={j} className="italic text-slate-600">{subPart}</em>;
+            }
+            return subPart;
+          })}
+        </React.Fragment>
+      );
+    }
+    
+    return part;
+  });
+};
+
+const MarkdownText: React.FC<{ text: string }> = ({ text }) => {
+  if (!text) return null;
+  const lines = text.split('\n');
+  return (
+    <div className="space-y-1">
+      {lines.map((line, index) => {
+        const cleanLine = line.trim();
+        
+        if (cleanLine === '***' || cleanLine === '---' || cleanLine === '___') {
+          return <hr key={index} className="my-3 border-slate-200" />;
+        }
+        
+        const bulletMatch = line.match(/^(\s*)([*\-+])\s+(.*)$/);
+        if (bulletMatch) {
+          const content = bulletMatch[3];
+          return (
+            <li key={index} className="ml-4 list-disc pl-0.5 my-0.5 text-slate-700">
+              {parseBoldText(content)}
+            </li>
+          );
+        }
+        
+        const headerMatch = line.match(/^(#{1,6})\s+(.*)$/);
+        if (headerMatch) {
+          const level = headerMatch[1].length;
+          const content = headerMatch[2];
+          const children = parseBoldText(content);
+          
+          if (level === 1) return <h1 key={index} className="text-lg font-bold mt-3 mb-1 text-slate-800">{children}</h1>;
+          if (level === 2) return <h2 key={index} className="text-base font-bold mt-2 mb-1 text-slate-800">{children}</h2>;
+          if (level === 3) return <h3 key={index} className="text-sm font-bold mt-2 mb-0.5 text-indigo-750">{children}</h3>;
+          return <h4 key={index} className="text-xs font-bold mt-1.5 mb-0.5 text-slate-700">{children}</h4>;
+        }
+        
+        if (cleanLine === '') {
+          return <div key={index} className="h-1.5" />;
+        }
+        
+        return (
+          <p key={index} className="leading-relaxed my-0.5">
+            {parseBoldText(line)}
+          </p>
+        );
+      })}
+    </div>
+  );
+};
+
 export const AIConsultPage: React.FC = () => {
   // Chat States
   const [messages, setMessages] = useState<Message[]>([
@@ -128,12 +201,12 @@ export const AIConsultPage: React.FC = () => {
                 {m.sender === 'user' ? <User className="h-4.5 w-4.5" /> : <Bot className="h-4.5 w-4.5" />}
               </div>
               
-              <div className={`p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+              <div className={`p-4 rounded-2xl text-sm leading-relaxed ${
                 m.sender === 'user'
-                  ? 'bg-indigo-600 text-white rounded-tr-none shadow-sm'
+                  ? 'bg-indigo-600 text-white rounded-tr-none shadow-sm whitespace-pre-wrap'
                   : 'bg-slate-50 text-slate-700 border border-slate-200/50 rounded-tl-none'
               }`}>
-                {m.text}
+                {m.sender === 'user' ? m.text : <MarkdownText text={m.text} />}
               </div>
             </div>
           ))}
@@ -212,8 +285,8 @@ export const AIConsultPage: React.FC = () => {
                     <FileText className="h-5 w-5" />
                     AI-Aggregated Patient Summary
                   </div>
-                  <div className="whitespace-pre-wrap text-slate-600 bg-slate-50 p-5 rounded-2xl border border-slate-100 font-medium leading-relaxed shadow-sm">
-                    {summary}
+                  <div className="text-slate-600 bg-slate-50 p-5 rounded-2xl border border-slate-100 font-medium leading-relaxed shadow-sm">
+                    <MarkdownText text={summary} />
                   </div>
                 </div>
               )}
@@ -224,8 +297,8 @@ export const AIConsultPage: React.FC = () => {
                     <Stethoscope className="h-5 w-5" />
                     Recommended Medical Consultations
                   </div>
-                  <div className="whitespace-pre-wrap text-slate-600 bg-slate-50 p-5 rounded-2xl border border-slate-100 font-medium leading-relaxed shadow-sm">
-                    {specialists}
+                  <div className="text-slate-600 bg-slate-50 p-5 rounded-2xl border border-slate-100 font-medium leading-relaxed shadow-sm">
+                    <MarkdownText text={specialists} />
                   </div>
                 </div>
               )}
@@ -252,7 +325,9 @@ export const AIConsultPage: React.FC = () => {
                   {explanation && (
                     <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-3 shadow-sm">
                       <div className="font-bold text-slate-800 capitalize text-base">{explainTerm}</div>
-                      <p className="text-slate-600 text-sm leading-relaxed">{explanation}</p>
+                      <div className="text-slate-600 text-sm leading-relaxed">
+                        <MarkdownText text={explanation} />
+                      </div>
                     </div>
                   )}
                 </div>
