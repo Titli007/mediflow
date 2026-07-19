@@ -42,9 +42,9 @@ def test_2_database():
 
 def test_3_create_dummy_pdf():
     print_step(3, "Creating Test Document")
-    test_file = Path("test_document.txt")
+    test_file = Path("test_document.pdf")
     
-    # Create a simple text file as test
+    # Create a simple PDF as test
     content = """
     PRESCRIPTION
     
@@ -61,9 +61,20 @@ def test_3_create_dummy_pdf():
     Instructions: Take with water. Do not skip doses.
     """
     
-    test_file.write_text(content)
+    try:
+        import fitz
+        doc = fitz.open()
+        page = doc.new_page()
+        page.insert_text((50, 50), content)
+        doc.save(str(test_file))
+        doc.close()
+    except Exception as e:
+        print(f"⚠️ Could not use fitz to create PDF: {e}. Writing raw text to test_document.pdf (might fail validation/extraction)")
+        test_file.write_text(content)
+        
     print(f"✅ Test document created: {test_file}")
     return test_file
+
 
 def test_4_upload(test_file):
     print_step(4, "Uploading Test Document")
@@ -206,7 +217,7 @@ def main():
         test_7_get_document(doc_id)
     
     # Test 8: Database
-    test_8_database()
+    test_8_debug_database()
     
     print_header("VERIFICATION COMPLETE ✅")
     print("\n📊 Summary:")

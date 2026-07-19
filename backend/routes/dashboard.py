@@ -90,7 +90,33 @@ def get_user_dashboard(
             except Exception:
                 pass
                 
-    # 5. Fetch statistics
+    # 5. Extract biometric trends from completed documents
+    biometric_trends = []
+    for doc in documents:
+        if doc.extracted_metadata:
+            try:
+                meta = json.loads(doc.extracted_metadata)
+                biometrics = meta.get("biometrics")
+                if biometrics and any(v is not None for v in biometrics.values()):
+                    date_val = doc.document_date or doc.uploaded_at or datetime.utcnow()
+                    date_str = date_val.strftime("%Y-%m-%d")
+                    biometric_trends.append({
+                        "date": date_str,
+                        "heart_rate": biometrics.get("heart_rate"),
+                        "blood_pressure_systolic": biometrics.get("blood_pressure_systolic"),
+                        "blood_pressure_diastolic": biometrics.get("blood_pressure_diastolic"),
+                        "blood_glucose": biometrics.get("blood_glucose"),
+                        "hba1c": biometrics.get("hba1c"),
+                        "cholesterol": biometrics.get("cholesterol"),
+                        "document_name": doc.file_name
+                    })
+            except Exception:
+                pass
+    
+    # Sort biometric trends by date ascending
+    biometric_trends.sort(key=lambda x: x["date"])
+                
+    # 6. Fetch statistics
     total_docs = db.query(Document).filter(Document.user_id == current_user.id).count()
     total_appts = db.query(Appointment).filter(Appointment.user_id == current_user.id).count()
     total_rems = db.query(Reminder).filter(Reminder.user_id == current_user.id).count()
@@ -121,5 +147,6 @@ def get_user_dashboard(
         "recent_documents": recent_docs_list,
         "upcoming_appointments": upcoming_appts_list,
         "active_reminders": active_reminders_list,
-        "current_medications": list(medications)
+        "current_medications": list(medications),
+        "biometric_trends": biometric_trends
     }

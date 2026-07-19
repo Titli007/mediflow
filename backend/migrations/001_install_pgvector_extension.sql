@@ -6,6 +6,3 @@
 -- and operations for similarity search on embeddings.
 
 CREATE EXTENSION IF NOT EXISTS vector;
-
--- Grant usage to public (allows all database users to use the extension)
-ALTER DEFAULT PRIVILEGES GRANT USAGE ON SCHEMA public TO public;

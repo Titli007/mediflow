@@ -1,44 +1,7 @@
-PRESCRIPTION
-
 Patient Name: John Doe
-Date of Birth: 01/15/1985
-Prescription Date: 07/18/2024
-
-Doctor: Dr. Michael Smith
-Medical License: MD123456
-Clinic: Central Medical Center
-
-DIAGNOSIS:
-Hypertension Stage 2
-Type 2 Diabetes Mellitus
-
-MEDICATIONS:
-
-1. Lisinopril
-   Dosage: 10 mg
-   Frequency: Once daily in the morning
-   Quantity: 30 tablets
-   Refills: 3
-
-2. Metformin
-   Dosage: 500 mg
-   Frequency: Twice daily with meals
-   Quantity: 60 tablets
-   Refills: 3
-
-3. Atorvastatin
-   Dosage: 20 mg
-   Frequency: Once daily at bedtime
-   Quantity: 30 tablets
-   Refills: 3
-
-INSTRUCTIONS:
-- Take all medications as prescribed
-- Monitor blood pressure daily
-- Maintain low sodium diet
-- Exercise 30 minutes daily
-- Follow up in 4 weeks
-- Do not stop medications without consulting doctor
-
-Notes: Patient is compliant with medication regimen. 
-Recheck blood work in 3 months.
+Doctor Name: Dr. Testdoc
+Date: 2026-07-20
+Rx: Testmed 500mg - Once daily at morning.
+Diagnosis: Mild Hypertension.
+Findings: Blood glucose is 95 mg/dL. Heart rate is 75 bpm. Cholesterol is 190 mg/dL.
+Follow up appointment with Dr. Testdoc at General Hospital in 7 days.

@@ -21,7 +21,7 @@ class EmbeddingService:
     
     # Cohere API configuration
     MODEL = "embed-english-v3.0"
-    DIMENSION = 384
+    DIMENSION = 1024
     MAX_CHARS_PER_REQUEST = 8000
     
     def __init__(self):
@@ -101,8 +101,8 @@ class EmbeddingService:
             )
             
             # Extract embedding from response
-            if response.embeddings and len(response.embeddings) > 0:
-                embedding = response.embeddings[0]
+            if response.embeddings and response.embeddings.float_ and len(response.embeddings.float_) > 0:
+                embedding = response.embeddings.float_[0]
                 
                 if len(embedding) != self.DIMENSION:
                     logger.warning(
@@ -113,12 +113,12 @@ class EmbeddingService:
                 logger.debug(f"Successfully embedded text ({len(text)} chars)")
                 return embedding
             else:
-                logger.warning("No embeddings returned from Cohere")
-                return None
+                logger.error("No embeddings returned from Cohere")
+                raise Exception("No embeddings returned from Cohere")
         
         except Exception as e:
             logger.error(f"Failed to generate embedding: {str(e)}")
-            return None
+            raise e
     
     def embed_batch(self, texts: List[str]) -> List[Optional[List[float]]]:
         """
@@ -156,7 +156,7 @@ class EmbeddingService:
             
             # Reconstruct results in original order
             results = [None] * len(texts)
-            for i, embedding in enumerate(response.embeddings):
+            for i, embedding in enumerate(response.embeddings.float_):
                 original_idx = indexed_texts[i][0]
                 results[original_idx] = embedding
             
@@ -165,7 +165,7 @@ class EmbeddingService:
         
         except Exception as e:
             logger.error(f"Failed to generate batch embeddings: {str(e)}")
-            return [None] * len(texts)
+            raise e
     
     async def embed_text_async(self, text: str) -> Optional[List[float]]:
         """
@@ -333,8 +333,8 @@ class MedicalEmbeddingProcessor:
         }
         
         if not self.service.is_available():
-            logger.warning("Embedding service not available")
-            return result
+            logger.error("Embedding service not available")
+            raise Exception("Cohere embedding service is not available (API key missing or client initialization failed)")
         
         try:
             # Generate text embedding
@@ -358,7 +358,7 @@ class MedicalEmbeddingProcessor:
         
         except Exception as e:
             logger.error(f"Error processing embeddings: {str(e)}")
-            return result
+            raise e
 
 
 # Global instance

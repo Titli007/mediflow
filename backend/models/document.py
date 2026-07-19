@@ -69,9 +69,9 @@ class Document(Base):
     medication_names = Column(Text, nullable=True)  # JSON array
     dosage_instructions = Column(Text, nullable=True)  # JSON
     # Vector embeddings for semantic search (pgvector)
-    extracted_text_embedding = Column(Vector(1536), nullable=True)
-    diagnosis_embedding = Column(Vector(1536), nullable=True)
-    medication_embedding = Column(Vector(1536), nullable=True)
+    extracted_text_embedding = Column(Vector(1024), nullable=True)
+    diagnosis_embedding = Column(Vector(1024), nullable=True)
+    medication_embedding = Column(Vector(1024), nullable=True)
 
 
 

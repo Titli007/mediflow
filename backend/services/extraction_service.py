@@ -20,7 +20,8 @@ logger = get_logger(__name__)
 
 # Set tesseract path for Windows
 if os.name == 'nt':
-    pytesseract.pytesseract.pytesseract_cmd = TESSERACT_PATH
+    logger.info(f"Setting Tesseract path to: {TESSERACT_PATH}")
+    pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
 
 
 class OCRExtractor:
@@ -279,7 +280,7 @@ class DocumentExtractor:
             
             # Extract text using OCR
             text, confidence = OCRExtractor.extract_text(image_path)
-            
+
             if not text or confidence < MIN_CONFIDENCE_SCORE:
                 result["error"] = f"Low confidence extraction: {confidence:.2%}"
                 return result
@@ -294,6 +295,7 @@ class DocumentExtractor:
             
         except Exception as e:
             result["error"] = str(e)
+            result["success"] = False
         
         return result
 
@@ -339,8 +341,9 @@ class DocumentExtractor:
                 if os.path.exists(temp_image_path):
                     os.remove(temp_image_path)
         except Exception as e:
-            logger.exception(f"Exception during PDF extraction: {str(e)}")
-            result["error"] = str(e)
+            logger.error(f"❌ PDF extraction pipeline failed: {str(e)}")
+            result["success"] = False
+            result["error"] = f"PDF extraction pipeline failed: {str(e)}"
         
         return result
 

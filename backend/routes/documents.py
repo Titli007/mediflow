@@ -3,10 +3,13 @@ import uuid
 from datetime import datetime
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
-from config.database import get_db
+from config.database import get_db, SessionLocal
 from config.settings import UPLOAD_DIRECTORY, ALLOWED_EXTENSIONS, MAX_FILE_SIZE
 from config.logging_config import get_logger
 from models.document import Document, DocumentType, ExtractionStatus, User
+from models.reminder import Reminder
+from models.appointment import Appointment
+from services.gemini_service import extract_medical_data
 from schemas.document import (
     DocumentResponseSchema,
     DocumentListSchema,
@@ -44,13 +47,15 @@ async def process_document_extraction(
     document_id: int,
     file_path: str,
     doc_type: str,
-    db: Session
+    db_passed: Session = None
 ):
     """Background task to process document extraction"""
     logger.info(f"🔄 Starting extraction for document_id={document_id}")
     logger.debug(f"   File path: {file_path}")
     logger.debug(f"   Document type: {doc_type}")
     
+    # Open our own session for background processing to avoid closed session errors
+    db = SessionLocal()
     try:
         db_document = db.query(Document).filter(Document.id == document_id).first()
         if not db_document:
@@ -80,35 +85,129 @@ async def process_document_extraction(
         if result["success"]:
             logger.info(f"✅ Extraction successful! Confidence: {result['confidence_score']:.1%}")
             
+            extracted_text = result["extracted_text"]
+            
             # Update document with extracted data
-            db_document.extracted_text = result["extracted_text"]
+            db_document.extracted_text = extracted_text
             db_document.confidence_score = result["confidence_score"]
             db_document.extraction_status = ExtractionStatus.COMPLETED
             db_document.extracted_at = datetime.utcnow()
             
-            # Store structured data
+            # Query Gemini for clinical extraction
+            logger.info("🤖 Querying Gemini for structured medical extraction...")
+            gemini_data = extract_medical_data(extracted_text, doc_type)
+            
+            # Use Gemini data, throwing an error if it fails
+            if not gemini_data:
+                raise Exception("Gemini structured extraction failed or returned no data")
+            
+            logger.info("✅ Gemini structured extraction succeeded!")
             structured_data = result.get("structured_data", {})
+            patient_name = gemini_data.get("patient_name")
+            doctor_name = gemini_data.get("doctor_name")
+            diagnosis = gemini_data.get("diagnosis")
+            findings = gemini_data.get("findings")
+            medications = gemini_data.get("medications") or []
+            biometrics = gemini_data.get("biometrics") or {}
+            appointments = gemini_data.get("appointments") or []
+            
+            # Merge back into structured_data for extracted_metadata
+            structured_data.update(gemini_data)
+            
             db_document.extracted_metadata = json.dumps(structured_data)
             
-            logger.info(f"📊 Extracted metadata: {list(structured_data.keys())}")
+            if patient_name:
+                db_document.patient_name = patient_name
+            if doctor_name:
+                db_document.doctor_name = doctor_name
+            if diagnosis:
+                db_document.diagnosis = diagnosis
+            if findings:
+                db_document.medical_findings = findings
             
-            # Update specific fields if available
-            if structured_data.get("patient_name"):
-                db_document.patient_name = structured_data["patient_name"]
-                logger.info(f"   Patient: {structured_data['patient_name']}")
-            if structured_data.get("doctor_name"):
-                db_document.doctor_name = structured_data["doctor_name"]
-                logger.info(f"   Doctor: {structured_data['doctor_name']}")
-            if structured_data.get("diagnosis"):
-                db_document.diagnosis = structured_data["diagnosis"]
-                logger.info(f"   Diagnosis: {structured_data['diagnosis'][:50]}...")
-            if structured_data.get("findings"):
-                db_document.medical_findings = structured_data["findings"]
-                logger.info(f"   Findings: {structured_data['findings'][:50]}...")
-            if structured_data.get("medications"):
-                db_document.medication_names = json.dumps(structured_data["medications"])
-                logger.info(f"   Medications: {len(structured_data['medications'])} found")
+            # Medications processing
+            if medications:
+                db_document.medication_names = json.dumps(medications)
+                logger.info(f"   Medications: {len(medications)} found")
+                
+                # Automatically create Reminders for each medication
+                user_id = db_document.user_id
+                for med in medications:
+                    med_name = med.get("name") if isinstance(med, dict) else med
+                    if not med_name:
+                        continue
+                    
+                    dosage = med.get("dosage") if isinstance(med, dict) else None
+                    frequency = med.get("frequency") if isinstance(med, dict) else "daily"
+                    
+                    title = med_name
+                    if dosage:
+                        title += f" - {dosage}"
+                    
+                    # Avoid duplicate reminders
+                    existing_reminder = db.query(Reminder).filter(
+                        Reminder.user_id == user_id,
+                        Reminder.title == title
+                    ).first()
+                    
+                    if not existing_reminder:
+                        logger.info(f"⏰ Creating automatic medication reminder: {title}")
+                        new_reminder = Reminder(
+                            user_id=user_id,
+                            reminder_type="medicine",
+                            title=title,
+                            reminder_time="09:00",  # default time
+                            frequency=frequency or "daily",
+                            is_active=True
+                        )
+                        db.add(new_reminder)
             
+            # Appointments processing
+            if appointments:
+                user_id = db_document.user_id
+                for appt in appointments:
+                    appt_doc = appt.get("doctor_name") or doctor_name or "Medical Specialist"
+                    appt_hosp = appt.get("hospital_name") or "General Clinic"
+                    appt_reason = appt.get("reason") or "Follow up consultation"
+                    appt_date_str = appt.get("appointment_date")
+                    
+                    appt_date = None
+                    if appt_date_str:
+                        try:
+                            if "T" in appt_date_str:
+                                appt_date = datetime.fromisoformat(appt_date_str)
+                            else:
+                                appt_date = datetime.strptime(appt_date_str.split()[0], "%Y-%m-%d")
+                        except Exception:
+                            pass
+                    
+                    if not appt_date:
+                        from datetime import timedelta
+                        doc_date = db_document.document_date or db_document.uploaded_at or datetime.utcnow()
+                        appt_date = doc_date + timedelta(days=7)
+                    
+                    # Avoid duplicate appointments
+                    existing_appt = db.query(Appointment).filter(
+                        Appointment.user_id == user_id,
+                        Appointment.doctor_name == appt_doc,
+                        Appointment.appointment_date == appt_date
+                    ).first()
+                    
+                    if not existing_appt:
+                        logger.info(f"📅 Creating automatic follow-up appointment with {appt_doc} on {appt_date}")
+                        new_appt = Appointment(
+                            user_id=user_id,
+                            doctor_name=appt_doc,
+                            hospital_name=appt_hosp,
+                            appointment_date=appt_date,
+                            reason=appt_reason,
+                            status="scheduled"
+                        )
+                        db.add(new_appt)
+            
+            # Commit the reminders & appointments
+            db.commit()
+
             # Generate and store embeddings using Cohere
             logger.info(f"🔄 Generating embeddings via Cohere...")
             try:
@@ -118,30 +217,37 @@ async def process_document_extraction(
                 
                 if processor.service.is_available():
                     embeddings = processor.process_document_embeddings(
-                        extracted_text=result["extracted_text"],
-                        diagnosis=structured_data.get("diagnosis"),
-                        findings=structured_data.get("findings"),
-                        medications=structured_data.get("medications_json"),  # Pass as is
-                        dosages=structured_data.get("dosages_json")
+                        extracted_text=extracted_text,
+                        diagnosis=diagnosis,
+                        findings=findings,
+                        medications=json.dumps(medications),
+                        dosages=None
                     )
                     
                     # Store embeddings in database
                     if embeddings.get("extracted_text_embedding"):
                         db_document.extracted_text_embedding = embeddings["extracted_text_embedding"]
-                        logger.info(f"✅ Stored extracted_text_embedding (384 dims)")
+                        logger.info(f"✅ Stored extracted_text_embedding (1024 dims)")
+                    else:
+                        raise Exception("Failed to generate extracted text embedding")
                     
                     if embeddings.get("diagnosis_embedding"):
                         db_document.diagnosis_embedding = embeddings["diagnosis_embedding"]
-                        logger.info(f"✅ Stored diagnosis_embedding (384 dims)")
+                        logger.info(f"✅ Stored diagnosis_embedding (1024 dims)")
+                    elif diagnosis or findings:
+                        raise Exception("Failed to generate diagnosis embedding")
                     
                     if embeddings.get("medication_embedding"):
                         db_document.medication_embedding = embeddings["medication_embedding"]
-                        logger.info(f"✅ Stored medication_embedding (384 dims)")
+                        logger.info(f"✅ Stored medication_embedding (1024 dims)")
+                    elif medications:
+                        raise Exception("Failed to generate medication embedding")
                 else:
-                    logger.warning(f"⚠️  Cohere embedding service not available, skipping embeddings")
+                    raise Exception("Cohere embedding service is not available (API key missing or client initialization failed)")
             
             except Exception as e:
                 logger.error(f"❌ Error generating embeddings: {str(e)}")
+                raise
             
             db.commit()
             logger.info(f"✅ Document {document_id} COMPLETED and saved to database (with embeddings)")
@@ -152,7 +258,7 @@ async def process_document_extraction(
             db_document.extraction_error = result.get("error", "Unknown error")
             db.commit()
             logger.error(f"❌ Document {document_id} marked as FAILED in database")
-    
+            
     except Exception as e:
         logger.exception(f"💥 Exception during extraction for document_id={document_id}")
         db_document = db.query(Document).filter(Document.id == document_id).first()
@@ -161,6 +267,8 @@ async def process_document_extraction(
             db_document.extraction_error = str(e)
             db.commit()
             logger.error(f"❌ Document {document_id} marked as FAILED due to exception")
+    finally:
+        db.close()
 
 
 @router.post("/upload")
