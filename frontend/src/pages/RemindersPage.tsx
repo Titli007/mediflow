@@ -14,6 +14,9 @@ interface Reminder {
   frequency: string;
   start_date: string;
   end_date?: string;
+  is_active: boolean;
+  doses_taken_today: number;
+  last_taken_date?: string;
   notes?: string;
 }
 
@@ -32,6 +35,27 @@ export const RemindersPage: React.FC = () => {
     notes: '',
   });
 
+  const getDoseCount = (frequency: string): number => {
+    const freq = frequency.toLowerCase();
+    if (freq.includes('three') || freq.includes('3 times') || freq.includes('tds')) return 3;
+    if (freq.includes('twice') || freq.includes('2 times') || freq.includes('bd') || freq.includes('bid')) return 2;
+    if (freq.includes('four') || freq.includes('4 times')) return 4;
+    return 1; // Default to 1 dose
+  };
+
+  const handleToggleDose = async (reminder: Reminder, index: number, isTaken: boolean) => {
+    try {
+      if (isTaken) {
+        await apiClient.post(`/api/reminders/${reminder.id}/reset-dose`);
+      } else {
+        await apiClient.post(`/api/reminders/${reminder.id}/log-dose`);
+      }
+      fetchReminders();
+    } catch (err: any) {
+      setError(err.message || 'Failed to toggle dose');
+    }
+  };
+
   const fetchReminders = async () => {
     try {
       setIsLoading(true);
@@ -44,9 +68,12 @@ export const RemindersPage: React.FC = () => {
           medication_name: hasDash ? r.title.split(' - ')[0] : r.title || '',
           dosage: hasDash ? r.title.split(' - ')[1] : '',
           frequency: r.frequency || 'daily',
-          start_date: r.reminder_time || r.created_at || new Date().toISOString(),
-          end_date: undefined,
-          notes: '',
+          start_date: r.start_date || r.created_at || new Date().toISOString(),
+          end_date: r.end_date || undefined,
+          is_active: r.is_active,
+          doses_taken_today: r.doses_taken_today || 0,
+          last_taken_date: r.last_taken_date || undefined,
+          notes: r.notes || '',
         };
       });
       setReminders(mapped);
@@ -67,9 +94,12 @@ export const RemindersPage: React.FC = () => {
       const payload = {
         reminder_type: 'medicine',
         title: formData.dosage ? `${formData.medication_name} - ${formData.dosage}` : formData.medication_name,
-        reminder_time: new Date(formData.start_date).toISOString(),
+        reminder_time: '09:00', // daily time
         frequency: formData.frequency,
         is_active: true,
+        start_date: formData.start_date ? new Date(formData.start_date).toISOString() : new Date().toISOString(),
+        end_date: formData.end_date ? new Date(formData.end_date).toISOString() : null,
+        notes: formData.notes || '',
       };
 
       if (editingId) {
@@ -92,9 +122,9 @@ export const RemindersPage: React.FC = () => {
       medication_name: reminder.medication_name,
       dosage: reminder.dosage,
       frequency: reminder.frequency,
-      start_date: reminder.start_date.split('T')[0],
-      end_date: '',
-      notes: '',
+      start_date: reminder.start_date ? reminder.start_date.split('T')[0] : '',
+      end_date: reminder.end_date ? reminder.end_date.split('T')[0] : '',
+      notes: reminder.notes || '',
     });
     setIsDialogOpen(true);
   };
@@ -167,73 +197,230 @@ export const RemindersPage: React.FC = () => {
           No medication reminders configured. Add one to track your dosage alerts.
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {reminders.map((reminder) => (
-            <Card 
-              key={reminder.id} 
-              variant="glass" 
-              className="flex flex-col justify-between border-slate-200/60 hover:border-indigo-500/20 hover:scale-[1.01] transition-all duration-300"
-            >
-              <div className="p-6">
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-indigo-50 border border-indigo-200/50 rounded-xl text-indigo-600">
-                      <Pill className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-slate-800">{reminder.medication_name}</h3>
-                      <p className="text-xs text-slate-400 mt-0.5">{reminder.dosage}</p>
-                    </div>
-                  </div>
-                </div>
+        <div className="space-y-10">
+          {/* Active Medications section */}
+          {reminders.filter(r => r.is_active).length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                Active Medications
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {reminders.filter(r => r.is_active).map((reminder) => {
+                  const doseCount = getDoseCount(reminder.frequency);
+                  const isFullyTaken = reminder.doses_taken_today >= doseCount;
+                  const isLate = new Date().getHours() >= 18;
+                  const isMissed = !isFullyTaken && isLate;
+                  
+                  return (
+                    <Card 
+                      key={reminder.id} 
+                      variant="glass" 
+                      className={`flex flex-col justify-between border-slate-200/60 hover:scale-[1.01] transition-all duration-300 ${
+                        isFullyTaken
+                          ? 'border-emerald-500/10 shadow-emerald-500/[0.01]'
+                          : isMissed
+                          ? 'border-rose-500/20 shadow-rose-500/[0.02]'
+                          : 'hover:border-indigo-500/20'
+                      }`}
+                    >
+                      <div className="p-6">
+                        <div className="flex items-start justify-between gap-3 mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2.5 rounded-xl border text-white ${
+                              isFullyTaken 
+                                ? 'bg-emerald-550 border-emerald-500/30' 
+                                : isMissed 
+                                ? 'bg-rose-500 border-rose-500/30' 
+                                : 'bg-indigo-600 border-indigo-200/50'
+                            }`}>
+                              <Pill className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-slate-800">{reminder.medication_name}</h3>
+                              <p className="text-xs text-slate-400 mt-0.5">{reminder.dosage}</p>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            {isFullyTaken ? (
+                              <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                Fully Taken Today
+                              </span>
+                            ) : isMissed ? (
+                              <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500/10 text-rose-600 border border-rose-500/20 animate-pulse">
+                                Dose Missed / Pending
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 animate-pulse">
+                                Doses Pending
+                              </span>
+                            )}
+                          </div>
+                        </div>
 
-                <div className="space-y-2 pt-3 border-t border-slate-100 text-sm text-slate-500">
-                  <div className="flex justify-between">
-                    <span>Frequency:</span>
-                    <span className="font-medium text-slate-800">{reminder.frequency}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Start Date:</span>
-                    <span className="font-medium text-slate-800">
-                      {new Date(reminder.start_date).toLocaleDateString()}
-                    </span>
-                  </div>
-                  {reminder.end_date && (
-                    <div className="flex justify-between">
-                      <span>End Date:</span>
-                      <span className="font-medium text-slate-800">
-                        {new Date(reminder.end_date).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                        <div className="space-y-2 pt-3 border-t border-slate-100 text-sm text-slate-500">
+                          <div className="flex justify-between">
+                            <span>Frequency:</span>
+                            <span className="font-medium text-slate-800">{reminder.frequency}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Start Date:</span>
+                            <span className="font-medium text-slate-800">
+                              {new Date(reminder.start_date).toLocaleDateString()}
+                            </span>
+                          </div>
+                          {reminder.end_date && (
+                            <div className="flex justify-between">
+                              <span>End Date:</span>
+                              <span className="font-medium text-slate-800">
+                                {new Date(reminder.end_date).toLocaleDateString()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
 
-                {reminder.notes && (
-                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 text-xs text-slate-500 mt-4 leading-relaxed">
-                    <span className="font-semibold block text-slate-400 mb-1">Notes:</span>
-                    {reminder.notes}
-                  </div>
-                )}
+                        {/* Compliance circle logging */}
+                        <div className="mt-4 pt-4 border-t border-slate-100">
+                          <span className="block text-slate-400 text-xs font-semibold mb-2">Today's Doses compliance</span>
+                          <div className="flex items-center gap-2">
+                            {Array.from({ length: doseCount }).map((_, idx) => {
+                              const isTaken = idx < reminder.doses_taken_today;
+                              return (
+                                <button
+                                  key={idx}
+                                  onClick={() => handleToggleDose(reminder, idx, isTaken)}
+                                  className={`h-7 w-7 rounded-full flex items-center justify-center font-bold text-xs border transition-all cursor-pointer ${
+                                    isTaken
+                                      ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/20'
+                                      : 'bg-white border-slate-200 text-slate-400 hover:border-indigo-500/30'
+                                  }`}
+                                  title={isTaken ? 'Mark as untaken' : 'Mark as taken'}
+                                >
+                                  {idx + 1}
+                                </button>
+                              );
+                            })}
+                            <span className="text-xs font-medium text-slate-500 ml-1.5">
+                              {reminder.doses_taken_today} of {doseCount} logged
+                            </span>
+                          </div>
+                        </div>
+
+                        {reminder.notes && (
+                          <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 text-xs text-slate-500 mt-4 leading-relaxed">
+                            <span className="font-semibold block text-slate-400 mb-1">Notes:</span>
+                            {reminder.notes}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex justify-end gap-2 px-6 pb-6 pt-4 border-t border-slate-100">
+                        <Button 
+                          className="py-1.5 px-3 flex items-center gap-1 text-xs" 
+                          variant="secondary"
+                          onClick={() => handleEdit(reminder)}
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                          Edit
+                        </Button>
+                        <button 
+                          onClick={() => handleDelete(reminder.id)}
+                          className="text-slate-400 hover:text-rose-500 p-2 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="h-4.5 w-4.5" />
+                        </button>
+                      </div>
+                    </Card>
+                  );
+                })}
               </div>
+            </div>
+          )}
 
-              <div className="flex justify-end gap-2 px-6 pb-6 pt-4 border-t border-slate-100">
-                <Button 
-                  className="py-1.5 px-3 flex items-center gap-1 text-xs" 
-                  variant="secondary"
-                  onClick={() => handleEdit(reminder)}
-                >
-                  <Edit2 className="h-3.5 w-3.5" />
-                  Edit
-                </Button>
-                <button 
-                  onClick={() => handleDelete(reminder.id)}
-                  className="text-slate-400 hover:text-rose-500 p-2 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                >
-                  <Trash2 className="h-4.5 w-4.5" />
-                </button>
+          {/* Past / Discontinued Medications section */}
+          {reminders.filter(r => !r.is_active).length > 0 && (
+            <div className="space-y-4 pt-4 border-t border-slate-150/40">
+              <h2 className="text-lg font-bold text-slate-400 flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-slate-400"></span>
+                Past / Discontinued Medications
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-75">
+                {reminders.filter(r => !r.is_active).map((reminder) => (
+                  <Card 
+                    key={reminder.id} 
+                    variant="glass" 
+                    className="flex flex-col justify-between border-slate-200 bg-slate-50/20"
+                  >
+                    <div className="p-6">
+                      <div className="flex items-start justify-between gap-3 mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-400">
+                            <Pill className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-500 line-through">{reminder.medication_name}</h3>
+                            <p className="text-xs text-slate-400 mt-0.5">{reminder.dosage}</p>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-400 border border-slate-200">
+                            Not Continued
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 pt-3 border-t border-slate-100 text-sm text-slate-400">
+                        <div className="flex justify-between">
+                          <span>Frequency:</span>
+                          <span className="font-medium text-slate-600">{reminder.frequency}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Start Date:</span>
+                          <span className="font-medium text-slate-600">
+                            {new Date(reminder.start_date).toLocaleDateString()}
+                          </span>
+                        </div>
+                        {reminder.end_date && (
+                          <div className="flex justify-between">
+                            <span>End Date:</span>
+                            <span className="font-medium text-slate-600">
+                              {new Date(reminder.end_date).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {reminder.notes && (
+                        <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-100/50 text-xs text-slate-400 mt-4 leading-relaxed">
+                          <span className="font-semibold block text-slate-400 mb-1">Notes:</span>
+                          {reminder.notes}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end gap-2 px-6 pb-6 pt-4 border-t border-slate-100">
+                      <Button 
+                        className="py-1.5 px-3 flex items-center gap-1 text-xs" 
+                        variant="secondary"
+                        onClick={() => handleEdit(reminder)}
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                        Edit
+                      </Button>
+                      <button 
+                        onClick={() => handleDelete(reminder.id)}
+                        className="text-slate-400 hover:text-rose-500 p-2 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="h-4.5 w-4.5" />
+                      </button>
+                    </div>
+                  </Card>
+                ))}
               </div>
-            </Card>
-          ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -173,14 +173,40 @@ async def process_document_extraction(
                     ).first()
                     
                     if not existing_reminder:
-                        logger.info(f"⏰ Creating automatic medication reminder: {title}")
+                        import re
+                        from datetime import timedelta
+                        
+                        duration_str = med.get("duration") if isinstance(med, dict) else None
+                        duration_days = None
+                        if duration_str:
+                            ds = duration_str.lower().strip()
+                            nums = re.findall(r'\d+', ds)
+                            if nums:
+                                val = int(nums[0])
+                                if 'week' in ds:
+                                    duration_days = val * 7
+                                elif 'month' in ds:
+                                    duration_days = val * 30
+                                elif 'year' in ds:
+                                    duration_days = val * 365
+                                else:
+                                    duration_days = val
+                                    
+                        start_date = db_document.document_date or db_document.uploaded_at or datetime.utcnow()
+                        end_date = None
+                        if duration_days:
+                            end_date = start_date + timedelta(days=duration_days)
+                            
+                        logger.info(f"⏰ Creating automatic medication reminder: {title} (Starts: {start_date}, Ends: {end_date})")
                         new_reminder = Reminder(
                             user_id=user_id,
                             reminder_type="medicine",
                             title=title,
-                            reminder_time="09:00",  # default time
+                            reminder_time="09:00",  # default daily time
                             frequency=frequency or "daily",
-                            is_active=True
+                            is_active=True,
+                            start_date=start_date,
+                            end_date=end_date
                         )
                         db.add(new_reminder)
             

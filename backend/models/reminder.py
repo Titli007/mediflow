@@ -15,5 +15,11 @@ class Reminder(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
+    # Medication tracking fields
+    start_date = Column(DateTime, default=datetime.utcnow)
+    end_date = Column(DateTime, nullable=True)
+    doses_taken_today = Column(Integer, default=0)
+    last_taken_date = Column(DateTime, nullable=True)
+    
     # Relationship to user
     owner = relationship("User", backref="reminders")

@@ -21,7 +21,11 @@ def create_reminder(
         title=reminder_in.title,
         reminder_time=reminder_in.reminder_time,
         frequency=reminder_in.frequency,
-        is_active=reminder_in.is_active
+        is_active=reminder_in.is_active,
+        start_date=reminder_in.start_date,
+        end_date=reminder_in.end_date,
+        doses_taken_today=reminder_in.doses_taken_today,
+        last_taken_date=reminder_in.last_taken_date
     )
     db.add(db_reminder)
     db.commit()
@@ -33,7 +37,29 @@ def list_reminders(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return db.query(Reminder).filter(Reminder.user_id == current_user.id).order_by(Reminder.reminder_time.asc()).all()
+    reminders = db.query(Reminder).filter(Reminder.user_id == current_user.id).order_by(Reminder.reminder_time.asc()).all()
+    
+    from datetime import datetime
+    today = datetime.utcnow().date()
+    updated = False
+    
+    for r in reminders:
+        # Check if we need to reset the daily dose tracker (new day)
+        if r.last_taken_date and r.last_taken_date.date() < today:
+            r.doses_taken_today = 0
+            updated = True
+            
+        # Auto-expire/end reminder if it has an end_date and the end_date has passed
+        if r.is_active and r.end_date and r.end_date.date() < today:
+            r.is_active = False
+            updated = True
+            
+    if updated:
+        db.commit()
+        # Fetch fresh data
+        reminders = db.query(Reminder).filter(Reminder.user_id == current_user.id).order_by(Reminder.reminder_time.asc()).all()
+        
+    return reminders
 
 @router.get("/{reminder_id}", response_model=ReminderResponse)
 def get_reminder(
@@ -44,6 +70,40 @@ def get_reminder(
     reminder = db.query(Reminder).filter(Reminder.id == reminder_id, Reminder.user_id == current_user.id).first()
     if not reminder:
         raise HTTPException(status_code=404, detail="Reminder not found")
+    return reminder
+
+@router.post("/{reminder_id}/log-dose", response_model=ReminderResponse)
+def log_dose(
+    reminder_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    reminder = db.query(Reminder).filter(Reminder.id == reminder_id, Reminder.user_id == current_user.id).first()
+    if not reminder:
+        raise HTTPException(status_code=404, detail="Reminder not found")
+        
+    from datetime import datetime
+    reminder.doses_taken_today = (reminder.doses_taken_today or 0) + 1
+    reminder.last_taken_date = datetime.utcnow()
+    db.commit()
+    db.refresh(reminder)
+    return reminder
+
+@router.post("/{reminder_id}/reset-dose", response_model=ReminderResponse)
+def reset_dose(
+    reminder_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    reminder = db.query(Reminder).filter(Reminder.id == reminder_id, Reminder.user_id == current_user.id).first()
+    if not reminder:
+        raise HTTPException(status_code=404, detail="Reminder not found")
+        
+    from datetime import datetime
+    reminder.doses_taken_today = max(0, (reminder.doses_taken_today or 0) - 1)
+    reminder.last_taken_date = datetime.utcnow()
+    db.commit()
+    db.refresh(reminder)
     return reminder
 
 @router.put("/{reminder_id}", response_model=ReminderResponse)
