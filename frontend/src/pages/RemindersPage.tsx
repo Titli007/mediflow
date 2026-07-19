@@ -44,21 +44,31 @@ export const RemindersPage: React.FC = () => {
   };
 
   const handleToggleDose = async (reminder: Reminder, index: number, isTaken: boolean) => {
+    // 1. Optimistic local update
+    const doseCount = getDoseCount(reminder.frequency);
+    const updatedDoses = isTaken 
+      ? Math.max(0, reminder.doses_taken_today - 1) 
+      : Math.min(doseCount, reminder.doses_taken_today + 1);
+      
+    setReminders(prev => prev.map(r => r.id === reminder.id ? { ...r, doses_taken_today: updatedDoses } : r));
+
+    // 2. Background API call
     try {
       if (isTaken) {
         await apiClient.post(`/api/reminders/${reminder.id}/reset-dose`);
       } else {
         await apiClient.post(`/api/reminders/${reminder.id}/log-dose`);
       }
-      fetchReminders();
+      fetchReminders(true); // silent fetch
     } catch (err: any) {
+      fetchReminders(true); // rollback to actual DB state
       setError(err.message || 'Failed to toggle dose');
     }
   };
 
-  const fetchReminders = async () => {
+  const fetchReminders = async (silent = false) => {
     try {
-      setIsLoading(true);
+      if (!silent) setIsLoading(true);
       setError(null);
       const response = await apiClient.get('/api/reminders/');
       const mapped = response.data.map((r: any) => {
@@ -168,7 +178,7 @@ export const RemindersPage: React.FC = () => {
         </div>
         <div className="flex gap-2">
           <button 
-            onClick={fetchReminders}
+            onClick={() => fetchReminders(false)}
             className="text-slate-400 hover:text-slate-600 transition-colors p-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer"
           >
             <RefreshCw className="h-4.5 w-4.5" />
@@ -225,37 +235,62 @@ export const RemindersPage: React.FC = () => {
                       }`}
                     >
                       <div className="p-6">
-                        <div className="flex items-start justify-between gap-3 mb-4">
+                        <div className="flex items-start justify-between gap-3 mb-6">
                           <div className="flex items-center gap-3">
-                            <div className={`p-2.5 rounded-xl border text-white ${
+                            <div className={`p-2.5 rounded-xl border text-white transition-all duration-300 ${
                               isFullyTaken 
-                                ? 'bg-emerald-550 border-emerald-500/30' 
+                                ? 'bg-emerald-500 border-emerald-500/30' 
                                 : isMissed 
-                                ? 'bg-rose-500 border-rose-500/30' 
+                                ? 'bg-rose-500 border-rose-500/30 shadow-lg shadow-rose-500/10' 
                                 : 'bg-indigo-600 border-indigo-200/50'
                             }`}>
                               <Pill className="h-5 w-5" />
                             </div>
                             <div>
-                              <h3 className="font-bold text-slate-800">{reminder.medication_name}</h3>
-                              <p className="text-xs text-slate-400 mt-0.5">{reminder.dosage}</p>
+                              <h3 className="font-bold text-slate-800 text-base leading-tight">{reminder.medication_name}</h3>
+                              <p className="text-xs text-slate-400 mt-0.5 font-medium">{reminder.dosage}</p>
+                              <div className="mt-1.5">
+                                {isFullyTaken ? (
+                                  <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                    All Taken Today
+                                  </span>
+                                ) : isMissed ? (
+                                  <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500/10 text-rose-600 border border-rose-500/20 animate-pulse">
+                                    Dose Missed / Pending
+                                  </span>
+                                ) : (
+                                  <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-indigo-550 text-indigo-600 border border-indigo-500/20">
+                                    Pending Doses
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                           
-                          <div>
-                            {isFullyTaken ? (
-                              <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                                Fully Taken Today
-                              </span>
-                            ) : isMissed ? (
-                              <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500/10 text-rose-600 border border-rose-500/20 animate-pulse">
-                                Dose Missed / Pending
-                              </span>
-                            ) : (
-                              <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 animate-pulse">
-                                Doses Pending
-                              </span>
-                            )}
+                          {/* Compliance circle logging on top! */}
+                          <div className="flex flex-col items-end gap-1.5 shrink-0 bg-slate-50/50 p-2 rounded-xl border border-slate-100/80">
+                            <div className="flex items-center gap-1.5">
+                              {Array.from({ length: doseCount }).map((_, idx) => {
+                                const isTaken = idx < reminder.doses_taken_today;
+                                return (
+                                  <button
+                                    key={idx}
+                                    onClick={() => handleToggleDose(reminder, idx, isTaken)}
+                                    className={`h-7 w-7 rounded-full flex items-center justify-center font-bold text-xs border transition-all cursor-pointer ${
+                                      isTaken
+                                        ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/20 animate-pop'
+                                        : 'bg-white border-slate-200 text-slate-400 hover:border-indigo-500/30'
+                                    }`}
+                                    title={isTaken ? 'Mark as untaken' : 'Mark as taken'}
+                                  >
+                                    {idx + 1}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-400">
+                              {reminder.doses_taken_today} / {doseCount} taken
+                            </span>
                           </div>
                         </div>
 
@@ -278,33 +313,6 @@ export const RemindersPage: React.FC = () => {
                               </span>
                             </div>
                           )}
-                        </div>
-
-                        {/* Compliance circle logging */}
-                        <div className="mt-4 pt-4 border-t border-slate-100">
-                          <span className="block text-slate-400 text-xs font-semibold mb-2">Today's Doses compliance</span>
-                          <div className="flex items-center gap-2">
-                            {Array.from({ length: doseCount }).map((_, idx) => {
-                              const isTaken = idx < reminder.doses_taken_today;
-                              return (
-                                <button
-                                  key={idx}
-                                  onClick={() => handleToggleDose(reminder, idx, isTaken)}
-                                  className={`h-7 w-7 rounded-full flex items-center justify-center font-bold text-xs border transition-all cursor-pointer ${
-                                    isTaken
-                                      ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/20'
-                                      : 'bg-white border-slate-200 text-slate-400 hover:border-indigo-500/30'
-                                  }`}
-                                  title={isTaken ? 'Mark as untaken' : 'Mark as taken'}
-                                >
-                                  {idx + 1}
-                                </button>
-                              );
-                            })}
-                            <span className="text-xs font-medium text-slate-500 ml-1.5">
-                              {reminder.doses_taken_today} of {doseCount} logged
-                            </span>
-                          </div>
                         </div>
 
                         {reminder.notes && (

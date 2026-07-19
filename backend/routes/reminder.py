@@ -37,7 +37,7 @@ def list_reminders(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    reminders = db.query(Reminder).filter(Reminder.user_id == current_user.id).order_by(Reminder.reminder_time.asc()).all()
+    reminders = db.query(Reminder).filter(Reminder.user_id == current_user.id).order_by(Reminder.reminder_time.asc(), Reminder.id.asc()).all()
     
     from datetime import datetime
     today = datetime.utcnow().date()
@@ -57,7 +57,7 @@ def list_reminders(
     if updated:
         db.commit()
         # Fetch fresh data
-        reminders = db.query(Reminder).filter(Reminder.user_id == current_user.id).order_by(Reminder.reminder_time.asc()).all()
+        reminders = db.query(Reminder).filter(Reminder.user_id == current_user.id).order_by(Reminder.reminder_time.asc(), Reminder.id.asc()).all()
         
     return reminders
 
