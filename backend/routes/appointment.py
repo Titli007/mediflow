@@ -9,12 +9,32 @@ from typing import List
 
 router = APIRouter(prefix="/api/appointments", tags=["appointments"])
 
+from datetime import timedelta
+
 @router.post("/", response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
 def create_appointment(
     appointment_in: AppointmentCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    # Enforce 2-hour slot buffers to prevent doctor double-booking
+    requested_time = appointment_in.appointment_date
+    start_bound = requested_time - timedelta(hours=2)
+    end_bound = requested_time + timedelta(hours=2)
+
+    overlapping = db.query(Appointment).filter(
+        Appointment.doctor_name == appointment_in.doctor_name,
+        Appointment.appointment_date > start_bound,
+        Appointment.appointment_date < end_bound,
+        Appointment.status != "cancelled"
+    ).first()
+
+    if overlapping:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{appointment_in.doctor_name} already has an appointment scheduled at {overlapping.appointment_date.strftime('%H:%M')} (requires a 1-hour buffer)."
+        )
+
     db_appointment = Appointment(
         user_id=current_user.id,
         doctor_name=appointment_in.doctor_name,

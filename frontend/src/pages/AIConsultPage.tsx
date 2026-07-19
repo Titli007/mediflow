@@ -208,7 +208,7 @@ export const AIConsultPage: React.FC = () => {
             </div>
             <div>
               <h3 className="font-bold text-slate-800">Clinical Chatbot</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Gemini 3.1 Flash-Lite Engine</p>
+              <p className="text-xs text-slate-400 mt-0.5">Clinical AI Engine</p>
             </div>
           </div>
           
