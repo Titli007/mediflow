@@ -93,7 +93,7 @@ export const AppointmentsPage: React.FC = () => {
         <div className="flex gap-2">
           <button 
             onClick={fetchAppointments}
-            className="text-slate-400 hover:text-slate-650 transition-colors p-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer"
+            className="text-slate-400 hover:text-slate-600 transition-colors p-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer"
           >
             <RefreshCw className="h-4.5 w-4.5" />
           </button>
@@ -122,7 +122,7 @@ export const AppointmentsPage: React.FC = () => {
                 {/* Doctor and Status */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-indigo-50 border border-indigo-200/50 rounded-xl text-indigo-650">
+                    <div className="p-2.5 bg-indigo-50 border border-indigo-200/50 rounded-xl text-indigo-600">
                       <Stethoscope className="h-5 w-5" />
                     </div>
                     <div>
@@ -132,7 +132,7 @@ export const AppointmentsPage: React.FC = () => {
                   </div>
                   <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
                     appt.status === 'scheduled'
-                      ? 'bg-indigo-50 text-indigo-650 border border-indigo-200/50'
+                      ? 'bg-indigo-50 text-indigo-600 border border-indigo-200/50'
                       : 'bg-emerald-50 text-emerald-600 border border-emerald-200/50'
                   }`}>
                     {appt.status.toUpperCase()}

@@ -205,7 +205,7 @@ export const DocumentsPage: React.FC = () => {
                             <p className="text-xs text-slate-400 mt-0.5 capitalize">{result.document_type}</p>
                           </div>
                         </div>
-                        <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-indigo-50 text-indigo-650 border border-indigo-200/50">
+                        <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-indigo-50 text-indigo-600 border border-indigo-200/50">
                           {Math.round(result.similarity_score * 100)}% Match
                         </span>
                       </div>
@@ -306,7 +306,7 @@ export const DocumentsPage: React.FC = () => {
                   {selectedDoc.extraction_status === 'completed' && (
                     <button
                       onClick={() => navigate('/consult', { state: { selectedDocId: selectedDoc.id, selectedDocName: selectedDoc.file_name } })}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-650 hover:bg-indigo-600 border border-transparent text-xs font-bold text-white rounded-xl shadow-sm transition-all cursor-pointer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-600 border border-transparent text-xs font-bold text-white rounded-xl shadow-sm transition-all cursor-pointer"
                     >
                       <BrainCircuit className="h-3.5 w-3.5" />
                       Chat
@@ -337,14 +337,14 @@ export const DocumentsPage: React.FC = () => {
                 {/* Diagnosis and Findings */}
                 <div>
                   <span className="block text-slate-500 text-xs font-bold mb-2">Diagnosis</span>
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm leading-relaxed text-slate-650">
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm leading-relaxed text-slate-600">
                     {selectedDoc.diagnosis || 'No diagnoses extracted.'}
                   </div>
                 </div>
 
                 <div>
                   <span className="block text-slate-500 text-xs font-bold mb-2">Findings & Details</span>
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm leading-relaxed text-slate-650">
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm leading-relaxed text-slate-600">
                     {selectedDoc.medical_findings || 'No key findings extracted.'}
                   </div>
                 </div>

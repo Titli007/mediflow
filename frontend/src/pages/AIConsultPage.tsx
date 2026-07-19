@@ -35,7 +35,7 @@ const parseBoldText = (text: string) => {
         <React.Fragment key={i}>
           {italicParts.map((subPart, j) => {
             if (j % 2 === 1) {
-              return <em key={j} className="italic text-slate-650">{subPart}</em>;
+              return <em key={j} className="italic text-slate-600">{subPart}</em>;
             }
             return subPart;
           })}
@@ -77,7 +77,7 @@ const MarkdownText: React.FC<{ text: string }> = ({ text }) => {
           
           if (level === 1) return <h1 key={index} className="text-lg font-bold mt-3 mb-1 text-slate-800">{children}</h1>;
           if (level === 2) return <h2 key={index} className="text-base font-bold mt-2 mb-1 text-slate-800">{children}</h2>;
-          if (level === 3) return <h3 key={index} className="text-sm font-bold mt-2 mb-0.5 text-indigo-750">{children}</h3>;
+          if (level === 3) return <h3 key={index} className="text-sm font-bold mt-2 mb-0.5 text-indigo-700">{children}</h3>;
           return <h4 key={index} className="text-xs font-bold mt-1.5 mb-0.5 text-slate-700">{children}</h4>;
         }
         
@@ -204,7 +204,7 @@ export const AIConsultPage: React.FC = () => {
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-indigo-50 border border-indigo-200/50 rounded-xl">
-              <Bot className="h-5 w-5 text-indigo-650" />
+              <Bot className="h-5 w-5 text-indigo-600" />
             </div>
             <div>
               <h3 className="font-bold text-slate-800">Clinical Chatbot</h3>
@@ -214,7 +214,7 @@ export const AIConsultPage: React.FC = () => {
           
           {focusedDoc && (
             <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-150 rounded-xl px-3 py-1 animate-pulse">
-              <span className="text-[10px] font-extrabold text-indigo-750 truncate max-w-[120px]" title={focusedDoc.name}>
+              <span className="text-[10px] font-extrabold text-indigo-700 truncate max-w-[120px]" title={focusedDoc.name}>
                 Focus: {focusedDoc.name}
               </span>
               <button 
@@ -238,7 +238,7 @@ export const AIConsultPage: React.FC = () => {
               <div className={`p-2 rounded-xl shrink-0 ${
                 m.sender === 'user' 
                   ? 'bg-indigo-600 text-white' 
-                  : 'bg-slate-50 text-indigo-650 border border-slate-200/50'
+                  : 'bg-slate-50 text-indigo-600 border border-slate-200/50'
               }`}>
                 {m.sender === 'user' ? <User className="h-4.5 w-4.5" /> : <Bot className="h-4.5 w-4.5" />}
               </div>
@@ -284,7 +284,7 @@ export const AIConsultPage: React.FC = () => {
             onClick={() => setActiveTab('summary')}
             className={`flex-1 py-4 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
               activeTab === 'summary' 
-                ? 'border-indigo-600 text-indigo-650' 
+                ? 'border-indigo-600 text-indigo-600' 
                 : 'border-transparent text-slate-400 hover:text-slate-600'
             }`}
           >
@@ -294,7 +294,7 @@ export const AIConsultPage: React.FC = () => {
             onClick={() => setActiveTab('specialists')}
             className={`flex-1 py-4 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
               activeTab === 'specialists' 
-                ? 'border-indigo-600 text-indigo-650' 
+                ? 'border-indigo-600 text-indigo-600' 
                 : 'border-transparent text-slate-400 hover:text-slate-600'
             }`}
           >
@@ -304,7 +304,7 @@ export const AIConsultPage: React.FC = () => {
             onClick={() => setActiveTab('explainer')}
             className={`flex-1 py-4 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
               activeTab === 'explainer' 
-                ? 'border-indigo-600 text-indigo-650' 
+                ? 'border-indigo-600 text-indigo-600' 
                 : 'border-transparent text-slate-400 hover:text-slate-600'
             }`}
           >
@@ -323,7 +323,7 @@ export const AIConsultPage: React.FC = () => {
             <>
               {activeTab === 'summary' && (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-indigo-650 font-bold text-base mb-4">
+                  <div className="flex items-center gap-2 text-indigo-600 font-bold text-base mb-4">
                     <FileText className="h-5 w-5" />
                     AI-Aggregated Patient Summary
                   </div>
@@ -335,7 +335,7 @@ export const AIConsultPage: React.FC = () => {
 
               {activeTab === 'specialists' && (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-indigo-650 font-bold text-base mb-4">
+                  <div className="flex items-center gap-2 text-indigo-600 font-bold text-base mb-4">
                     <Stethoscope className="h-5 w-5" />
                     Recommended Medical Consultations
                   </div>
@@ -347,7 +347,7 @@ export const AIConsultPage: React.FC = () => {
 
               {activeTab === 'explainer' && (
                 <div className="space-y-6">
-                  <div className="flex items-center gap-2 text-indigo-650 font-bold text-base">
+                  <div className="flex items-center gap-2 text-indigo-600 font-bold text-base">
                     <BookOpen className="h-5 w-5" />
                     Clinical Term Explainer
                   </div>

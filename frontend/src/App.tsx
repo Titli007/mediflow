@@ -51,7 +51,7 @@ const AppLayout: React.FC = () => {
           {/* Logo Brand */}
           <div className="flex items-center gap-2.5 px-6 py-5 border-b border-slate-100 bg-slate-50/50">
             <Activity className="h-6 w-6 text-indigo-600" />
-            <span className="text-xl font-black bg-gradient-to-r from-indigo-650 to-indigo-500 bg-clip-text text-transparent">
+            <span className="text-xl font-black bg-gradient-to-r from-indigo-600 to-indigo-500 bg-clip-text text-transparent">
               MediFlow
             </span>
           </div>
@@ -67,7 +67,7 @@ const AppLayout: React.FC = () => {
                   to={link.to}
                   className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
                     isActive
-                      ? 'bg-indigo-50 text-indigo-650 border border-indigo-200/20 shadow-sm'
+                      ? 'bg-indigo-50 text-indigo-600 border border-indigo-200/20 shadow-sm'
                       : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
                   }`}
                 >
@@ -121,7 +121,7 @@ const AppLayout: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            <Link to="/documents" className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-650 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow-sm transition-all active:scale-[0.98]">
+            <Link to="/documents" className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow-sm transition-all active:scale-[0.98]">
               <span>Upload</span>
             </Link>
             

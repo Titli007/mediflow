@@ -235,7 +235,7 @@ export const DashboardPage: React.FC = () => {
               AI Insights
             </h3>
             <div className="mt-2">
-              <p className="font-bold text-indigo-650 text-sm">
+              <p className="font-bold text-indigo-600 text-sm">
                 {warnings.length > 0 ? 'Duplicate medications flagged' : 'Patient profile status stable'}
               </p>
               <p className="text-slate-450 text-xs mt-1 leading-normal truncate">
@@ -268,7 +268,7 @@ export const DashboardPage: React.FC = () => {
                   <button 
                     onClick={() => setSelectedMetric('heart_rate')}
                     className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                      selectedMetric === 'heart_rate' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-650'
+                      selectedMetric === 'heart_rate' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
                     }`}
                   >
                     Heart Rate (bpm)
@@ -276,7 +276,7 @@ export const DashboardPage: React.FC = () => {
                   <button 
                     onClick={() => setSelectedMetric('blood_glucose')}
                     className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                      selectedMetric === 'blood_glucose' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-650'
+                      selectedMetric === 'blood_glucose' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
                     }`}
                   >
                     Blood Glucose (mg/dL)
@@ -284,7 +284,7 @@ export const DashboardPage: React.FC = () => {
                   <button 
                     onClick={() => setSelectedMetric('cholesterol')}
                     className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                      selectedMetric === 'cholesterol' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-650'
+                      selectedMetric === 'cholesterol' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
                     }`}
                   >
                     Cholesterol (mg/dL)
@@ -398,7 +398,7 @@ export const DashboardPage: React.FC = () => {
       <Card variant="default" className="p-8">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-bold text-slate-800">Recent Activity</h3>
-          <Link to="/timeline" className="text-xs font-bold text-indigo-650 hover:text-indigo-500">
+          <Link to="/timeline" className="text-xs font-bold text-indigo-600 hover:text-indigo-500">
             View Patient Timeline
           </Link>
         </div>
@@ -428,7 +428,7 @@ export const DashboardPage: React.FC = () => {
                     {doc.extraction_status === 'completed' && (
                       <button
                         onClick={() => navigate('/consult', { state: { selectedDocId: doc.id, selectedDocName: doc.file_name } })}
-                        className="flex items-center gap-1 px-2.5 py-1 border border-indigo-200 text-[10px] font-bold text-indigo-650 bg-indigo-50/30 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
+                        className="flex items-center gap-1 px-2.5 py-1 border border-indigo-200 text-[10px] font-bold text-indigo-600 bg-indigo-50/30 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
                       >
                         <BrainCircuit className="h-3 w-3" />
                         Chat with Document

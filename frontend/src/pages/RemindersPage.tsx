@@ -139,7 +139,7 @@ export const RemindersPage: React.FC = () => {
         <div className="flex gap-2">
           <button 
             onClick={fetchReminders}
-            className="text-slate-400 hover:text-slate-650 transition-colors p-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer"
+            className="text-slate-400 hover:text-slate-600 transition-colors p-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer"
           >
             <RefreshCw className="h-4.5 w-4.5" />
           </button>
@@ -177,7 +177,7 @@ export const RemindersPage: React.FC = () => {
               <div className="p-6">
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-indigo-50 border border-indigo-200/50 rounded-xl text-indigo-650">
+                    <div className="p-2.5 bg-indigo-50 border border-indigo-200/50 rounded-xl text-indigo-600">
                       <Pill className="h-5 w-5" />
                     </div>
                     <div>

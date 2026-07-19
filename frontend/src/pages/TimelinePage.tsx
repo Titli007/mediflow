@@ -7,7 +7,7 @@ import {
   User,
   Pill,
   Activity,
-  Heart
+  Stethoscope
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 
@@ -34,7 +34,7 @@ const parseBoldText = (text: string) => {
         <React.Fragment key={i}>
           {italicParts.map((subPart, j) => {
             if (j % 2 === 1) {
-              return <em key={j} className="italic text-slate-650">{subPart}</em>;
+              return <em key={j} className="italic text-slate-600">{subPart}</em>;
             }
             return subPart;
           })}
@@ -76,7 +76,7 @@ const MarkdownText: React.FC<{ text: string }> = ({ text }) => {
           
           if (level === 1) return <h1 key={index} className="text-lg font-bold mt-3 mb-1 text-slate-800">{children}</h1>;
           if (level === 2) return <h2 key={index} className="text-base font-bold mt-2 mb-1 text-slate-800">{children}</h2>;
-          if (level === 3) return <h3 key={index} className="text-sm font-bold mt-2 mb-0.5 text-indigo-750">{children}</h3>;
+          if (level === 3) return <h3 key={index} className="text-sm font-bold mt-2 mb-0.5 text-indigo-700">{children}</h3>;
           return <h4 key={index} className="text-xs font-bold mt-1.5 mb-0.5 text-slate-700">{children}</h4>;
         }
         
@@ -142,7 +142,7 @@ export const TimelinePage: React.FC = () => {
           <button 
             onClick={() => setFilterType('all')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-              filterType === 'all' ? 'bg-indigo-650 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
+              filterType === 'all' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
             All History
@@ -150,7 +150,7 @@ export const TimelinePage: React.FC = () => {
           <button 
             onClick={() => setFilterType('consultation')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-              filterType === 'consultation' ? 'bg-indigo-650 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
+              filterType === 'consultation' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
             Consultations
@@ -158,7 +158,7 @@ export const TimelinePage: React.FC = () => {
           <button 
             onClick={() => setFilterType('medication')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-              filterType === 'medication' ? 'bg-indigo-650 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
+              filterType === 'medication' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
             Medications
@@ -166,7 +166,7 @@ export const TimelinePage: React.FC = () => {
           <button 
             onClick={() => setFilterType('test')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-              filterType === 'test' ? 'bg-indigo-650 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
+              filterType === 'test' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
             Tests
@@ -174,7 +174,7 @@ export const TimelinePage: React.FC = () => {
           <button 
             onClick={() => setFilterType('treatment')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-              filterType === 'treatment' ? 'bg-indigo-650 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
+              filterType === 'treatment' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
             Treatments & Diagnoses
@@ -194,7 +194,7 @@ export const TimelinePage: React.FC = () => {
         </Card>
       ) : summary ? (
         <Card variant="glass" className="p-7 border-indigo-500/10 bg-gradient-to-br from-indigo-500/5 to-transparent shadow-md glow-violet relative overflow-hidden">
-          <div className="flex items-center gap-2 text-indigo-650 font-bold text-base mb-4">
+          <div className="flex items-center gap-2 text-indigo-600 font-bold text-base mb-4">
             <Sparkles className="h-5 w-5 text-indigo-500 animate-pulse" />
             AI Clinical Summary & Health Advice
           </div>
@@ -214,7 +214,7 @@ export const TimelinePage: React.FC = () => {
                 {event.type === 'consultation' && <User className="h-4.5 w-4.5" />}
                 {event.type === 'medication' && <Pill className="h-4.5 w-4.5" />}
                 {event.type === 'test' && <Activity className="h-4.5 w-4.5" />}
-                {event.type === 'treatment' && <Heart className="h-4.5 w-4.5" />}
+                {event.type === 'treatment' && <Stethoscope className="h-4.5 w-4.5" />}
               </div>
 
               {/* Event card details */}
