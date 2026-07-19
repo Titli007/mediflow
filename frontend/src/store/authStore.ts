@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { apiClient } from '../api/client';
+import { getApiErrorMessage } from '../utils/apiError';
 
 interface User {
   id: number;
@@ -52,7 +53,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: false });
       return true;
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Invalid email or password';
+      const errorMsg = getApiErrorMessage(err, 'Invalid email or password');
       set({ error: errorMsg, isLoading: false, isAuthenticated: false, token: null });
       return false;
     }
@@ -70,7 +71,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: false });
       return await get().login(email, password);
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Registration failed. Email may already be registered.';
+      const errorMsg = getApiErrorMessage(err, 'Registration failed. Email may already be registered.');
       set({ error: errorMsg, isLoading: false });
       return false;
     }

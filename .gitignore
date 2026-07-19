@@ -46,3 +46,5 @@ backend/uploads/medical_docs/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+backend/gcp-credentials.json
+backend/gcp-credentials.json

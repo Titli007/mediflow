@@ -10,6 +10,7 @@ import {
   Search
 } from 'lucide-react';
 import { apiClient } from '../api/client';
+import { getApiErrorMessage } from '../utils/apiError';
 import { Link } from 'react-router-dom';
 
 interface Appointment {
@@ -112,7 +113,7 @@ export const AppointmentsPage: React.FC = () => {
         }
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to retrieve AI triage recommendation.');
+      setError(getApiErrorMessage(err, 'Failed to retrieve AI triage recommendation.'));
     } finally {
       setIsTriageLoading(false);
     }
@@ -144,7 +145,7 @@ export const AppointmentsPage: React.FC = () => {
       setDoctorsList([]);
       fetchAppointments();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to book slot.');
+      setError(getApiErrorMessage(err, 'Failed to book slot.'));
     } finally {
       setIsTriageLoading(false);
     }
@@ -171,7 +172,7 @@ export const AppointmentsPage: React.FC = () => {
       fetchAppointments();
       setActiveRightTab('my_schedules');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to book slot.');
+      setError(getApiErrorMessage(err, 'Failed to book slot.'));
     } finally {
       setIsLoading(false);
     }
@@ -197,7 +198,7 @@ export const AppointmentsPage: React.FC = () => {
       setIsOpen(false);
       fetchAppointments();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create appointment.');
+      setError(getApiErrorMessage(err, 'Failed to create appointment.'));
     } finally {
       setIsLoading(false);
     }

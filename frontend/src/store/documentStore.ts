@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { apiClient } from '../api/client';
+import { getApiErrorMessage } from '../utils/apiError';
 import { useAuthStore } from './authStore';
 
 interface Document {
@@ -73,7 +74,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       get().fetchDocuments();
       return true;
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Failed to upload document';
+      const errorMsg = getApiErrorMessage(err, 'Failed to upload document');
       set({ error: errorMsg, isLoading: false });
       return false;
     }

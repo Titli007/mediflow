@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { apiClient } from '../api/client';
+import { getApiErrorMessage } from '../utils/apiError';
 import { Card } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
 import { Dialog } from '../components/ui/Dialog';
@@ -169,7 +170,7 @@ export const DashboardPage: React.FC = () => {
       setTimeout(() => setLogSuccess(null), 5000);
       fetchDashboardData();
     } catch (err: any) {
-      setLogError(err.response?.data?.detail || 'Failed to log biometrics.');
+      setLogError(getApiErrorMessage(err, 'Failed to log biometrics.'));
     } finally {
       setIsLogging(false);
     }
