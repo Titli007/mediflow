@@ -18,6 +18,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "mediflow-secure-development-secret-key-129
 
 class ChatQuery(BaseModel):
     query: str
+    document_id: Optional[int] = None
 
 class TermQuery(BaseModel):
     term: str
@@ -72,11 +73,23 @@ GENERIC_DRUG_GROUPS = {
 
 @router.post("/chat")
 def ai_chat(query_in: ChatQuery, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Retrieve all completed documents for context
-    documents = db.query(Document).filter(
-        Document.user_id == current_user.id,
-        Document.extraction_status == ExtractionStatus.COMPLETED
-    ).all()
+    if query_in.document_id:
+        # Retrieve only the specified completed document
+        documents = db.query(Document).filter(
+            Document.user_id == current_user.id,
+            Document.id == query_in.document_id,
+            Document.extraction_status == ExtractionStatus.COMPLETED
+        ).all()
+        if not documents:
+            return {
+                "answer": "The specified document could not be found or has not finished processing yet."
+            }
+    else:
+        # Retrieve all completed documents for context
+        documents = db.query(Document).filter(
+            Document.user_id == current_user.id,
+            Document.extraction_status == ExtractionStatus.COMPLETED
+        ).all()
     
     if not documents:
         return {
@@ -88,10 +101,23 @@ def ai_chat(query_in: ChatQuery, current_user: User = Depends(get_current_user),
     for doc in documents:
         context += f"--- Document: {doc.file_name} (Type: {doc.document_type.value if doc.document_type else 'other'}, Date: {doc.document_date or doc.uploaded_at}) ---\n"
         if doc.extracted_text:
-            context += doc.extracted_text[:1000] + "\n\n"  # limit length of each doc context to avoid token limits
+            context += doc.extracted_text[:1200] + "\n\n"  # limit length of each doc context to avoid token limits
             
     # Try calling Gemini
-    prompt = f"""You are MediFlow's AI Medical Assistant. Use the patient's medical records context below to answer their question.
+    if query_in.document_id:
+        doc = documents[0]
+        prompt = f"""You are MediFlow's AI Medical Assistant. The user is asking a question specifically about the document: '{doc.file_name}' ({doc.document_type.value if doc.document_type else 'other'}).
+Use ONLY the context of this specific document to answer their question.
+Be empathetic, clear, and professional. Add a medical disclaimer stating that this is an AI interpretation and the patient should consult a doctor.
+
+Context for '{doc.file_name}':
+{doc.extracted_text or "No text extracted."}
+
+Question:
+{query_in.query}
+"""
+    else:
+        prompt = f"""You are MediFlow's AI Medical Assistant. Use the patient's medical records context below to answer their question.
 Be empathetic, clear, and professional. Add a medical disclaimer stating that this is an AI interpretation and the patient should consult a doctor.
 
 Context:

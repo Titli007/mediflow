@@ -43,6 +43,8 @@ class DocumentResponseSchema(BaseModel):
     patient_name: Optional[str] = None
     doctor_name: Optional[str] = None
     diagnosis: Optional[str] = None
+    medical_findings: Optional[str] = None
+    medication_names: Optional[str] = None
     
     class Config:
         from_attributes = True

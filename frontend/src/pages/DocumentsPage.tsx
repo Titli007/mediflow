@@ -4,10 +4,12 @@ import { useAuthStore } from '../store/authStore';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
-import { FileText, Upload, Trash2, X, RefreshCw, Search } from 'lucide-react';
+import { FileText, Upload, Trash2, X, RefreshCw, Search, BrainCircuit } from 'lucide-react';
 import { apiClient } from '../api/client';
+import { useNavigate } from 'react-router-dom';
 
 export const DocumentsPage: React.FC = () => {
+  const navigate = useNavigate();
   const { documents, fetchDocuments, uploadDocument, deleteDocument, isLoading, error } = useDocumentStore();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [docType, setDocType] = useState('prescription');
@@ -300,12 +302,23 @@ export const DocumentsPage: React.FC = () => {
                   <h3 className="text-lg font-bold text-slate-800">Extracted Information</h3>
                   <p className="text-xs text-slate-400 mt-0.5">ID: {selectedDoc.id}</p>
                 </div>
-                <button 
-                  onClick={() => setSelectedDoc(null)}
-                  className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-all cursor-pointer"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  {selectedDoc.extraction_status === 'completed' && (
+                    <button
+                      onClick={() => navigate('/consult', { state: { selectedDocId: selectedDoc.id, selectedDocName: selectedDoc.file_name } })}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-650 hover:bg-indigo-600 border border-transparent text-xs font-bold text-white rounded-xl shadow-sm transition-all cursor-pointer"
+                    >
+                      <BrainCircuit className="h-3.5 w-3.5" />
+                      Chat
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => setSelectedDoc(null)}
+                    className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-all cursor-pointer"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
 
               {/* Basic metadata */}
@@ -342,9 +355,21 @@ export const DocumentsPage: React.FC = () => {
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm">
                     {selectedDoc.medication_names ? (
                       <ul className="list-disc pl-5 space-y-1.5 text-slate-700 capitalize">
-                        {JSON.parse(selectedDoc.medication_names).map((med: any, index: number) => (
-                          <li key={index}>{typeof med === 'string' ? med : med.name}</li>
-                        ))}
+                        {JSON.parse(selectedDoc.medication_names).map((med: any, index: number) => {
+                          if (typeof med === 'string') {
+                            return <li key={index}>{med}</li>;
+                          }
+                          const parts = [];
+                          if (med.dosage) parts.push(med.dosage);
+                          if (med.frequency) parts.push(med.frequency);
+                          const details = parts.join(' - ');
+                          return (
+                            <li key={index}>
+                              <span className="font-semibold text-slate-800">{med.name}</span>
+                              {details && <span className="text-slate-500 text-xs ml-1.5">({details})</span>}
+                            </li>
+                          );
+                        })}
                       </ul>
                     ) : (
                       <span className="text-slate-450">No medications identified.</span>

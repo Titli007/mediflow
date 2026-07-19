@@ -10,9 +10,12 @@ import {
   FileText, 
   Stethoscope, 
   BookOpen, 
-  Search 
+  Search,
+  X,
+  BrainCircuit
 } from 'lucide-react';
 import { apiClient } from '../api/client';
+import { useLocation } from 'react-router-dom';
 
 interface Message {
   sender: 'user' | 'ai';
@@ -32,7 +35,7 @@ const parseBoldText = (text: string) => {
         <React.Fragment key={i}>
           {italicParts.map((subPart, j) => {
             if (j % 2 === 1) {
-              return <em key={j} className="italic text-slate-600">{subPart}</em>;
+              return <em key={j} className="italic text-slate-650">{subPart}</em>;
             }
             return subPart;
           })}
@@ -93,10 +96,16 @@ const MarkdownText: React.FC<{ text: string }> = ({ text }) => {
 };
 
 export const AIConsultPage: React.FC = () => {
+  const location = useLocation();
+  const stateDoc = location.state as { selectedDocId?: number; selectedDocName?: string } | null;
+
+  // Single document context focus state
+  const [focusedDoc, setFocusedDoc] = useState<{ id: number; name: string } | null>(
+    stateDoc?.selectedDocId ? { id: stateDoc.selectedDocId, name: stateDoc.selectedDocName || 'Document' } : null
+  );
+
   // Chat States
-  const [messages, setMessages] = useState<Message[]>([
-    { sender: 'ai', text: 'Hello! I am your MediFlow AI Clinical Assistant. Ask me anything about your uploaded medical records, prescriptions, or clinical findings.' }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [query, setQuery] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -115,6 +124,18 @@ export const AIConsultPage: React.FC = () => {
   useEffect(() => {
     fetchProfileSummary();
   }, []);
+
+  useEffect(() => {
+    if (focusedDoc) {
+      setMessages([
+        { sender: 'ai', text: `Hello! I am now focusing strictly on your document **${focusedDoc.name}**. Ask me any specific questions about its results, numbers, or details.` }
+      ]);
+    } else {
+      setMessages([
+        { sender: 'ai', text: 'Hello! I am your MediFlow AI Clinical Assistant. Ask me anything about your uploaded medical records, prescriptions, or clinical findings.' }
+      ]);
+    }
+  }, [focusedDoc]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -145,7 +166,11 @@ export const AIConsultPage: React.FC = () => {
     setIsChatLoading(true);
 
     try {
-      const response = await apiClient.post('/api/ai/chat', { query: userText });
+      const payload: any = { query: userText };
+      if (focusedDoc) {
+        payload.document_id = focusedDoc.id;
+      }
+      const response = await apiClient.post('/api/ai/chat', payload);
       setMessages((prev) => [...prev, { sender: 'ai', text: response.data.answer }]);
     } catch (err) {
       setMessages((prev) => [...prev, { sender: 'ai', text: 'Sorry, I encountered an error answering your query. Please verify your connection.' }]);
@@ -176,14 +201,31 @@ export const AIConsultPage: React.FC = () => {
       {/* Left Column: AI RAG Chat Bubble Interface */}
       <div className="lg:col-span-6 flex flex-col h-full bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-md">
         {/* Panel Header */}
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50 shrink-0">
-          <div className="p-2.5 bg-indigo-50 border border-indigo-200/50 rounded-xl">
-            <Bot className="h-5 w-5 text-indigo-650" />
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-indigo-50 border border-indigo-200/50 rounded-xl">
+              <Bot className="h-5 w-5 text-indigo-650" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800">Clinical Chatbot</h3>
+              <p className="text-xs text-slate-400 mt-0.5">Gemini 3.1 Flash-Lite Engine</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-bold text-slate-800">Clinical Chatbot</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Gemini 1.5 Flash RAG Engine</p>
-          </div>
+          
+          {focusedDoc && (
+            <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-150 rounded-xl px-3 py-1 animate-pulse">
+              <span className="text-[10px] font-extrabold text-indigo-750 truncate max-w-[120px]" title={focusedDoc.name}>
+                Focus: {focusedDoc.name}
+              </span>
+              <button 
+                onClick={() => setFocusedDoc(null)} 
+                className="text-indigo-400 hover:text-indigo-700 cursor-pointer p-0.5"
+                title="Clear document focus"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Chat History Container */}

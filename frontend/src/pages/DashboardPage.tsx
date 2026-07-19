@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   BrainCircuit
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface DashboardStats {
   total_documents: number;
@@ -44,6 +44,7 @@ interface Appointment {
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [medications, setMedications] = useState<string[]>([]);
   const [warnings, setWarnings] = useState<DuplicateWarning[]>([]);
@@ -419,19 +420,30 @@ export const DashboardPage: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="text-right">
+                <div className="text-right flex flex-col items-end gap-1.5">
                   <p className="text-xs text-slate-400">
                     {new Date(doc.uploaded_at).toLocaleDateString()}
                   </p>
-                  <span className={`inline-block px-2.5 py-0.5 mt-1.5 text-[10px] font-bold rounded-full uppercase tracking-wider ${
-                    doc.extraction_status === 'completed'
-                      ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                      : doc.extraction_status === 'failed'
-                      ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
-                      : 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 animate-pulse'
-                  }`}>
-                    {doc.extraction_status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {doc.extraction_status === 'completed' && (
+                      <button
+                        onClick={() => navigate('/consult', { state: { selectedDocId: doc.id, selectedDocName: doc.file_name } })}
+                        className="flex items-center gap-1 px-2.5 py-1 border border-indigo-200 text-[10px] font-bold text-indigo-650 bg-indigo-50/30 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
+                      >
+                        <BrainCircuit className="h-3 w-3" />
+                        Chat with Document
+                      </button>
+                    )}
+                    <span className={`inline-block px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider ${
+                      doc.extraction_status === 'completed'
+                        ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                        : doc.extraction_status === 'failed'
+                        ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+                        : 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 animate-pulse'
+                    }`}>
+                      {doc.extraction_status}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
