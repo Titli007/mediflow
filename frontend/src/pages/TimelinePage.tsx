@@ -2,17 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
 import { 
-  FileText, 
-  Calendar, 
-  Clock, 
   RefreshCw,
-  Sparkles
+  Sparkles,
+  User,
+  Pill,
+  Activity,
+  Heart
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 
 interface TimelineEvent {
   id: string;
-  type: 'document' | 'appointment' | 'reminder';
+  type: 'consultation' | 'medication' | 'test' | 'treatment';
   date: string;
   title: string;
   subtitle: string;
@@ -95,7 +96,7 @@ const MarkdownText: React.FC<{ text: string }> = ({ text }) => {
 
 export const TimelinePage: React.FC = () => {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
-  const [filterType, setFilterType] = useState<'all' | 'document' | 'appointment' | 'reminder'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'consultation' | 'medication' | 'test' | 'treatment'>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [summary, setSummary] = useState<string | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
@@ -147,28 +148,36 @@ export const TimelinePage: React.FC = () => {
             All History
           </button>
           <button 
-            onClick={() => setFilterType('document')}
+            onClick={() => setFilterType('consultation')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-              filterType === 'document' ? 'bg-indigo-650 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
+              filterType === 'consultation' ? 'bg-indigo-650 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            Reports
+            Consultations
           </button>
           <button 
-            onClick={() => setFilterType('appointment')}
+            onClick={() => setFilterType('medication')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-              filterType === 'appointment' ? 'bg-indigo-650 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
+              filterType === 'medication' ? 'bg-indigo-650 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            Visits
+            Medications
           </button>
           <button 
-            onClick={() => setFilterType('reminder')}
+            onClick={() => setFilterType('test')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-              filterType === 'reminder' ? 'bg-indigo-650 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
+              filterType === 'test' ? 'bg-indigo-650 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            Schedules
+            Tests
+          </button>
+          <button 
+            onClick={() => setFilterType('treatment')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              filterType === 'treatment' ? 'bg-indigo-650 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            Treatments & Diagnoses
           </button>
         </div>
       </div>
@@ -202,9 +211,10 @@ export const TimelinePage: React.FC = () => {
             <div key={event.id} className="relative">
               {/* Stepper Node Icon */}
               <div className="absolute -left-[50px] top-1.5 flex items-center justify-center w-9 h-9 rounded-xl bg-white border border-slate-200 text-indigo-600 shadow-sm z-10">
-                {event.type === 'document' && <FileText className="h-4.5 w-4.5" />}
-                {event.type === 'appointment' && <Calendar className="h-4.5 w-4.5" />}
-                {event.type === 'reminder' && <Clock className="h-4.5 w-4.5" />}
+                {event.type === 'consultation' && <User className="h-4.5 w-4.5" />}
+                {event.type === 'medication' && <Pill className="h-4.5 w-4.5" />}
+                {event.type === 'test' && <Activity className="h-4.5 w-4.5" />}
+                {event.type === 'treatment' && <Heart className="h-4.5 w-4.5" />}
               </div>
 
               {/* Event card details */}
