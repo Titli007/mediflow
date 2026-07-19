@@ -414,7 +414,6 @@ export const DashboardPage: React.FC = () => {
                       )}
 
                       <Button 
-                        size="sm"
                         onClick={() => setIsLogOpen(true)}
                         className="flex items-center gap-1.5 cursor-pointer text-xs font-bold"
                       >
