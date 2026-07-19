@@ -17,6 +17,7 @@ USE_GOOGLE_VISION = os.getenv("USE_GOOGLE_VISION", "false").lower() == "true"
 USE_TESSERACT = os.getenv("USE_TESSERACT", "true").lower() == "true"
 TESSERACT_PATH = os.getenv("TESSERACT_PATH", "tesseract")  # Windows: "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 # API
 API_TITLE = "Medical Document Extraction API"

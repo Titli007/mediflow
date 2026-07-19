@@ -76,30 +76,55 @@ class OCRExtractor:
 
     @staticmethod
     def extract_text_google_vision(image_path: str) -> Tuple[str, float]:
-        """Extract text using Google Cloud Vision API"""
-        if not USE_GOOGLE_VISION or not GOOGLE_VISION_API_KEY:
-            raise ValueError("Google Vision API is not configured")
+        """Extract text using Gemini Multimodal API (as a billing-free alternative to Google Vision)"""
+        from config.settings import GEMINI_API_KEY, GEMINI_MODEL
+        import base64
+        import requests
         
+        if not GEMINI_API_KEY:
+            raise ValueError("GEMINI_API_KEY is not configured in settings")
+            
         try:
-            from google.cloud import vision
-            client = vision.ImageAnnotatorClient()
-            
+            # Determine mime type based on extension
+            mime_type = "image/jpeg"
+            if image_path.lower().endswith(".png"):
+                mime_type = "image/png"
+            elif image_path.lower().endswith(".gif"):
+                mime_type = "image/gif"
+            elif image_path.lower().endswith(".bmp"):
+                mime_type = "image/bmp"
+                
             with open(image_path, "rb") as image_file:
-                content = image_file.read()
+                img_data = base64.b64encode(image_file.read()).decode("utf-8")
+                
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {"text": "Extract all readable text from this medical document image. Output ONLY the exact text seen in the image, keeping the layout as intact as possible. Do not add any conversational elements, introduction, or markdown wrapping."},
+                            {"inlineData": {"mimeType": mime_type, "data": img_data}}
+                        ]
+                    }
+                ]
+            }
             
-            image = vision.Image(content=content)
-            response = client.text_detection(image=image)
-            
-            if response.text_annotations:
-                full_text = response.text_annotations[0].text
-                # Calculate average confidence from individual annotations
-                confidences = [annotation.confidence for annotation in response.text_annotations[1:] if annotation.confidence > 0]
-                avg_confidence = sum(confidences) / len(confidences) if confidences else 0.8
-                return full_text, avg_confidence
+            response = requests.post(url, json=payload, headers=headers, timeout=25)
+            if response.status_code == 200:
+                res_data = response.json()
+                text = res_data["candidates"][0]["content"]["parts"][0]["text"]
+                return text, 0.95  # Return high confidence for Gemini multimodal OCR
             else:
-                return "", 0.0
+                raise Exception(f"Gemini API returned error {response.status_code}: {response.text}")
         except Exception as e:
-            raise Exception(f"Google Vision API error: {str(e)}")
+            logger.error(f"Failed Gemini multimodal OCR: {str(e)}")
+            # Fallback to Tesseract if configured
+            from config.settings import USE_TESSERACT
+            if USE_TESSERACT:
+                logger.info("⚠️ Falling back to Tesseract OCR...")
+                return OCRExtractor.extract_text_tesseract(image_path)
+            raise Exception(f"Vision extraction failed: {str(e)}")
 
     @staticmethod
     def extract_text(image_path: str) -> Tuple[str, float]:
