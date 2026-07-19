@@ -22,14 +22,32 @@ def get_user_timeline(
     documents = db.query(Document).filter(Document.user_id == current_user.id).all()
     for doc in documents:
         event_date = doc.document_date or doc.uploaded_at
+        
+        # User-friendly title and subtitle
+        doc_type_str = doc.document_type.value if doc.document_type else "other"
+        doc_type_display = doc_type_str.replace("_", " ").title()
+        title = f"{doc_type_display} ({doc.file_name})"
+        
+        # Dynamic description that cleans out empty or N/A values
+        desc_parts = []
+        diag_clean = (doc.diagnosis or "").strip().lower()
+        if diag_clean and diag_clean not in ("n/a", "none", "null"):
+            desc_parts.append(f"Diagnosis: {doc.diagnosis}")
+            
+        find_clean = (doc.medical_findings or "").strip().lower()
+        if find_clean and find_clean not in ("n/a", "none", "null"):
+            desc_parts.append(f"Findings: {doc.medical_findings}")
+            
+        description = " | ".join(desc_parts) if desc_parts else "No specific diagnosis or findings extracted."
+        
         timeline_events.append({
             "id": f"doc_{doc.id}",
             "reference_id": doc.id,
             "type": "document",
             "date": event_date,
-            "title": doc.file_name,
-            "subtitle": doc.document_type.value if doc.document_type else "other",
-            "description": f"Diagnosis: {doc.diagnosis or 'N/A'} | Findings: {doc.medical_findings or 'N/A'}",
+            "title": title,
+            "subtitle": doc_type_display,
+            "description": description,
             "status": doc.extraction_status.value
         })
         

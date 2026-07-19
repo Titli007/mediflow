@@ -93,6 +93,28 @@ async def process_document_extraction(
             db_document.extraction_status = ExtractionStatus.COMPLETED
             db_document.extracted_at = datetime.utcnow()
             
+            # If document type is other, try to infer it from extracted text content
+            if db_document.document_type == DocumentType.OTHER:
+                text_lower = extracted_text.lower()
+                if any(k in text_lower for k in ("cbc", "wbc", "rbc", "hba1c", "cholesterol", "urine", "glucose", "creatinine", "blood test", "lipid profile", "haemoglobin", "hemoglobin")):
+                    db_document.document_type = DocumentType.LAB_REPORT
+                    logger.info(f"🔄 Inferred document type as LAB_REPORT from text content")
+                elif any(k in text_lower for k in ("x-ray", "xray", "radiograph", "chest ap", "pa view")):
+                    db_document.document_type = DocumentType.X_RAY
+                    logger.info(f"🔄 Inferred document type as X_RAY from text content")
+                elif any(k in text_lower for k in ("mri", "magnetic resonance", "brain scan")):
+                    db_document.document_type = DocumentType.MRI
+                    logger.info(f"🔄 Inferred document type as MRI from text content")
+                elif any(k in text_lower for k in ("ct scan", "computed tomography", "ct abdomen")):
+                    db_document.document_type = DocumentType.CT_SCAN
+                    logger.info(f"🔄 Inferred document type as CT_SCAN from text content")
+                elif any(k in text_lower for k in ("ultrasound", "usg", "sonography", "pelvis")):
+                    db_document.document_type = DocumentType.ULTRASOUND
+                    logger.info(f"🔄 Inferred document type as ULTRASOUND from text content")
+                elif any(k in text_lower for k in ("prescription", "rx", "take 1", "tablet", "capsule")):
+                    db_document.document_type = DocumentType.PRESCRIPTION
+                    logger.info(f"🔄 Inferred document type as PRESCRIPTION from text content")
+            
             # Query Gemini for clinical extraction
             logger.info("🤖 Querying Gemini for structured medical extraction...")
             gemini_data = extract_medical_data(extracted_text, doc_type)
