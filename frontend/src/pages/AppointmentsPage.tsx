@@ -6,7 +6,8 @@ import { Dialog } from '../components/ui/Dialog';
 import { Alert } from '../components/ui/Alert';
 import { 
   Calendar, Plus, Trash2, MapPin, Stethoscope, RefreshCw, 
-  Sparkles, BrainCircuit, AlertTriangle, ShieldAlert, Clock, ArrowRight 
+  Sparkles, BrainCircuit, AlertTriangle, ShieldAlert, Clock, ArrowRight,
+  Search
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { Link } from 'react-router-dom';
@@ -48,6 +49,11 @@ export const AppointmentsPage: React.FC = () => {
   const [selectedSlot, setSelectedSlot] = useState<string>('');
   const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
 
+  // Doctor Directory state
+  const [allDoctors, setAllDoctors] = useState<Doctor[]>([]);
+  const [activeRightTab, setActiveRightTab] = useState<'my_schedules' | 'available_doctors'>('my_schedules');
+  const [doctorSearch, setDoctorSearch] = useState('');
+
   // Manual Form Fields
   const [doctorName, setDoctorName] = useState('');
   const [hospitalName, setHospitalName] = useState('');
@@ -67,8 +73,18 @@ export const AppointmentsPage: React.FC = () => {
     }
   };
 
+  const fetchAllDoctors = async () => {
+    try {
+      const response = await apiClient.get('/api/specialists/all');
+      setAllDoctors(response.data);
+    } catch (err: any) {
+      console.error('Failed to fetch doctor directory', err);
+    }
+  };
+
   useEffect(() => {
     fetchAppointments();
+    fetchAllDoctors();
   }, []);
 
   const handleTriageSubmit = async (e: React.FormEvent) => {
@@ -110,7 +126,6 @@ export const AppointmentsPage: React.FC = () => {
 
     setIsTriageLoading(true);
     try {
-      // Calculate a tomorrow date with the selected slot time
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       const [hour, minute] = selectedSlot.split(':');
@@ -132,6 +147,33 @@ export const AppointmentsPage: React.FC = () => {
       setError(err.response?.data?.detail || 'Failed to book slot.');
     } finally {
       setIsTriageLoading(false);
+    }
+  };
+
+  const handleBookDirectSlot = async (doc: any, slot: string) => {
+    setIsLoading(true);
+    setError(null);
+    setBookingSuccess(null);
+    try {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const [hour, minute] = slot.split(':');
+      tomorrow.setHours(parseInt(hour), parseInt(minute), 0, 0);
+
+      await apiClient.post('/api/appointments/', {
+        doctor_name: doc.name,
+        hospital_name: doc.hospital,
+        appointment_date: tomorrow.toISOString(),
+        reason: `Direct Booking: Scheduled slot ${slot} in ${doc.specialty} department.`,
+      });
+
+      setBookingSuccess(`Successfully booked appointment with ${doc.name} for tomorrow at ${slot}!`);
+      fetchAppointments();
+      setActiveRightTab('my_schedules');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to book slot.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -172,6 +214,13 @@ export const AppointmentsPage: React.FC = () => {
 
   const activeDoc = doctorsList.find(d => d.id === selectedDoctorId);
 
+  const filteredDoctors = allDoctors.filter(d => {
+    const term = doctorSearch.toLowerCase();
+    return d.name.toLowerCase().includes(term) || 
+           d.hospital.toLowerCase().includes(term) ||
+           (d as any).specialty.toLowerCase().includes(term);
+  });
+
   return (
     <div className="space-y-8 p-1 font-sans">
       
@@ -185,7 +234,7 @@ export const AppointmentsPage: React.FC = () => {
         </div>
         <div className="flex gap-2">
           <button 
-            onClick={fetchAppointments}
+            onClick={() => { fetchAppointments(); fetchAllDoctors(); }}
             className="text-slate-405 hover:text-slate-600 transition-colors p-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer"
           >
             <RefreshCw className="h-4.5 w-4.5" />
@@ -353,67 +402,162 @@ export const AppointmentsPage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Right Column: Active Appointments List */}
+        {/* Right Column: Active Appointments & Doctors Directory Switcher */}
         <div className="lg:col-span-7 space-y-6">
           <Card variant="default" className="p-6">
-            <h3 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-4">
-              <Calendar className="h-5 w-5 text-indigo-600" />
-              Scheduled Consultations
-            </h3>
-
-            {appointments.length > 0 ? (
-              <div className="space-y-4">
-                {appointments.map((appt) => (
-                  <div 
-                    key={appt.id}
-                    className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-xl border border-slate-150 bg-slate-50/50 hover:bg-slate-50 hover:shadow-sm transition duration-300"
-                  >
-                    <div className="flex gap-3">
-                      <div className="p-2 bg-indigo-50 border border-indigo-200/50 rounded-xl text-indigo-600 shrink-0 self-start mt-0.5">
-                        <Stethoscope className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-slate-850 text-sm leading-snug">{appt.doctor_name}</h4>
-                        <p className="text-xs text-slate-400 font-semibold mt-0.5 flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {appt.hospital_name}
-                        </p>
-                        
-                        <p className="text-[10px] font-bold text-indigo-600 bg-indigo-50/70 border border-indigo-100 rounded-md px-2 py-0.5 mt-2 inline-block">
-                          Scheduled: {new Date(appt.appointment_date).toLocaleString()}
-                        </p>
-
-                        {appt.reason && (
-                          <p className="text-xs text-slate-500 mt-2 bg-white/70 p-2.5 rounded-lg border border-slate-100 leading-normal">
-                            {appt.reason}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-4 md:mt-0 self-end md:self-auto flex items-center gap-3">
-                      <span className={`px-2.5 py-0.5 text-[9px] font-bold rounded-full border ${
-                        appt.status === 'scheduled'
-                          ? 'bg-indigo-50 text-indigo-600 border-indigo-200/50'
-                          : 'bg-emerald-50 text-emerald-600 border-emerald-250'
-                      }`}>
-                        {appt.status.toUpperCase()}
-                      </span>
-                      
-                      <button 
-                        onClick={() => handleDelete(appt.id)}
-                        className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer"
-                        title="Cancel Schedule"
-                      >
-                        <Trash2 className="h-4.5 w-4.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+            
+            {/* Header Tabs Selector */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-6">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-indigo-600" />
+                <h3 className="text-base font-bold text-slate-800">Clinic Scheduling</h3>
               </div>
-            ) : (
-              <div className="text-center py-16 text-slate-400 border border-dashed border-slate-200 rounded-2xl">
-                No active clinical appointments scheduled. Describe symptoms on the left to triage.
+
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200/50">
+                <button 
+                  onClick={() => setActiveRightTab('my_schedules')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeRightTab === 'my_schedules' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  My Schedules ({appointments.length})
+                </button>
+                <button 
+                  onClick={() => setActiveRightTab('available_doctors')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeRightTab === 'available_doctors' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Available Doctors ({allDoctors.length})
+                </button>
+              </div>
+            </div>
+
+            {/* TAB 1: USER BOOKED APPOINTMENTS */}
+            {activeRightTab === 'my_schedules' && (
+              <>
+                {appointments.length > 0 ? (
+                  <div className="space-y-4">
+                    {appointments.map((appt) => (
+                      <div 
+                        key={appt.id}
+                        className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-xl border border-slate-150 bg-slate-50/50 hover:bg-slate-50 hover:shadow-sm transition duration-300"
+                      >
+                        <div className="flex gap-3">
+                          <div className="p-2 bg-indigo-50 border border-indigo-200/50 rounded-xl text-indigo-600 shrink-0 self-start mt-0.5">
+                            <Stethoscope className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-slate-850 text-sm leading-snug">{appt.doctor_name}</h4>
+                            <p className="text-xs text-slate-400 font-semibold mt-0.5 flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {appt.hospital_name}
+                            </p>
+                            
+                            <p className="text-[10px] font-bold text-indigo-600 bg-indigo-50/70 border border-indigo-100 rounded-md px-2 py-0.5 mt-2 inline-block">
+                              Scheduled: {new Date(appt.appointment_date).toLocaleString()}
+                            </p>
+
+                            {appt.reason && (
+                              <p className="text-xs text-slate-500 mt-2 bg-white/70 p-2.5 rounded-lg border border-slate-100 leading-normal">
+                                {appt.reason}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-4 md:mt-0 self-end md:self-auto flex items-center gap-3">
+                          <span className={`px-2.5 py-0.5 text-[9px] font-bold rounded-full border ${
+                            appt.status === 'scheduled'
+                              ? 'bg-indigo-50 text-indigo-600 border-indigo-200/50'
+                              : 'bg-emerald-50 text-emerald-600 border-emerald-250'
+                          }`}>
+                            {appt.status.toUpperCase()}
+                          </span>
+                          
+                          <button 
+                            onClick={() => handleDelete(appt.id)}
+                            className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+                            title="Cancel Schedule"
+                          >
+                            <Trash2 className="h-4.5 w-4.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-16 text-slate-400 border border-dashed border-slate-200 rounded-2xl">
+                    No active clinical appointments scheduled. Describe symptoms on the left to triage.
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* TAB 2: ACTIVE DOCTOR DIRECTORY */}
+            {activeRightTab === 'available_doctors' && (
+              <div className="space-y-4">
+                
+                {/* Search / Filter Directory Input */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Search doctors by name, specialty, or hospital..."
+                    value={doctorSearch}
+                    onChange={(e) => setDoctorSearch(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500/20"
+                  />
+                </div>
+
+                {filteredDoctors.length > 0 ? (
+                  <div className="space-y-4 max-h-[450px] overflow-y-auto pr-1">
+                    {filteredDoctors.map((doc) => (
+                      <div 
+                        key={doc.id}
+                        className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm space-y-3 transition hover:shadow-md"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex gap-2.5">
+                            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100 shrink-0">
+                              <Stethoscope className="h-4.5 w-4.5" />
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-slate-800 text-sm leading-snug">{doc.name}</h4>
+                              <p className="text-[10px] text-indigo-600 font-extrabold uppercase tracking-wide mt-0.5">
+                                {(doc as any).specialty} Specialist
+                              </p>
+                              <p className="text-[10px] text-slate-450 mt-1 leading-normal flex items-center gap-1">
+                                <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                                {doc.hospital}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Booking slots row */}
+                        <div className="pt-2 border-t border-slate-100">
+                          <span className="block text-[9px] font-bold text-slate-400 uppercase mb-2">Select a Slot for Tomorrow:</span>
+                          <div className="flex flex-wrap gap-2">
+                            {doc.slots.map(slot => (
+                              <button
+                                key={slot}
+                                onClick={() => handleBookDirectSlot(doc, slot)}
+                                className="px-3 py-1.5 bg-slate-50 hover:bg-indigo-600 hover:text-white border border-slate-200 hover:border-indigo-600 text-xs font-bold text-slate-650 rounded-lg transition-all cursor-pointer"
+                              >
+                                {slot}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-slate-400">
+                    No doctors match your search query.
+                  </div>
+                )}
               </div>
             )}
           </Card>

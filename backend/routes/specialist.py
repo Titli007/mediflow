@@ -122,3 +122,17 @@ def recommend_specialist(
         "recommendation": rec_data,
         "doctors": doctors
     }
+
+@router.get("/all", response_model=List[Dict[str, Any]])
+def get_all_doctors():
+    doctors = []
+    for specialty, docs in DOCTORS_BY_SPECIALTY.items():
+        for doc in docs:
+            doctors.append({
+                "id": doc["id"],
+                "name": doc["name"],
+                "specialty": specialty,
+                "hospital": doc["hospital"],
+                "slots": doc["slots"]
+            })
+    return doctors
