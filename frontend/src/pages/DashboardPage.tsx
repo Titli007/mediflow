@@ -143,27 +143,6 @@ export const DashboardPage: React.FC = () => {
       {/* TAB 1: HEALTH OVERVIEW */}
       {selectedTab === 'overview' && (
         <>
-          {/* Duplicate Medication Warnings */}
-          {warnings.length > 0 && (
-            <Alert type="warning" title="Potential Medication Interaction Warning!" className="glow-rose border-rose-500/20">
-              <div className="space-y-3 mt-1 text-slate-700">
-                <p>We detected duplicate ingredients or duplicate prescriptions across your uploaded records. Please consult a physician immediately:</p>
-                {warnings.map((w, index) => (
-                  <div key={index} className="flex gap-2 items-start bg-white/40 p-3 rounded-lg border border-yellow-500/10">
-                    <AlertTriangle className="h-4.5 w-4.5 text-yellow-500 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold text-yellow-600 capitalize">{w.medication_1}</span> and{' '}
-                      <span className="font-bold text-yellow-600 capitalize">{w.medication_2}</span> ({w.reason})
-                      <div className="text-xs text-slate-500 mt-1">
-                        Found in: <span className="italic">{w.document_1}</span> & <span className="italic">{w.document_2}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Alert>
-          )}
-
           {/* Top Bento Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             
@@ -269,6 +248,27 @@ export const DashboardPage: React.FC = () => {
             </Card>
           </div>
 
+          {/* Duplicate Medication Warnings description below bento cards */}
+          {warnings.length > 0 && (
+            <Alert type="warning" title="Potential Medication Interaction Warning!" className="glow-rose border-rose-500/20 my-6">
+              <div className="space-y-3 mt-1 text-slate-700">
+                <p>We detected duplicate ingredients or duplicate prescriptions across your uploaded records. Please consult a physician immediately:</p>
+                {warnings.map((w, index) => (
+                  <div key={index} className="flex gap-2 items-start bg-white/40 p-3 rounded-lg border border-yellow-500/10">
+                    <AlertTriangle className="h-4.5 w-4.5 text-yellow-500 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-yellow-600 capitalize">{w.medication_1}</span> and{' '}
+                      <span className="font-bold text-yellow-600 capitalize">{w.medication_2}</span> ({w.reason})
+                      <div className="text-xs text-slate-500 mt-1">
+                        Found in: <span className="italic">{w.document_1}</span> & <span className="italic">{w.document_2}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Alert>
+          )}
+
           {/* Charts & Bento Section */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
@@ -316,10 +316,57 @@ export const DashboardPage: React.FC = () => {
                     const dataPoints = biometricTrends.filter(t => t[selectedMetric] !== null);
                     if (dataPoints.length === 0) {
                       return (
-                        <div className="w-full h-64 bg-slate-50 border border-slate-200/50 rounded-2xl flex flex-col items-center justify-center p-6 text-center">
-                          <Sparkles className="h-8 w-8 text-indigo-400 mb-3 animate-pulse" />
-                          <h4 className="font-bold text-slate-800 text-sm">No {selectedMetric.replace('_', ' ').toUpperCase()} readings</h4>
-                          <p className="text-xs text-slate-400 max-w-xs mt-1">Upload records in the Documents Hub to populate this metric trend.</p>
+                        <div className="w-full bg-slate-50 border border-slate-200/50 rounded-2xl p-6 relative overflow-hidden group">
+                          {/* Background Glow */}
+                          <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/5 via-transparent to-emerald-500/5 opacity-50"></div>
+                          
+                          <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Left Side: Daily Wellness Actions */}
+                            <div className="space-y-4">
+                              <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                                <CheckCircle2 className="h-4.5 w-4.5 text-indigo-600" />
+                                Your Daily Clinical Checklist
+                              </h4>
+                              <div className="space-y-2.5">
+                                <div className="flex gap-2.5 items-start p-3 bg-white rounded-xl border border-slate-100 shadow-sm hover:scale-[1.01] transition duration-200">
+                                  <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 h-5 w-5 rounded-full flex items-center justify-center shrink-0">1</span>
+                                  <p className="text-xs text-slate-650 leading-relaxed font-semibold">
+                                    Track compliance checklist inside the <Link to="/reminders" className="text-indigo-650 underline">Reminders Hub</Link> to log taken doses.
+                                  </p>
+                                </div>
+                                <div className="flex gap-2.5 items-start p-3 bg-white rounded-xl border border-slate-100 shadow-sm hover:scale-[1.01] transition duration-200">
+                                  <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 h-5 w-5 rounded-full flex items-center justify-center shrink-0">2</span>
+                                  <p className="text-xs text-slate-650 leading-relaxed font-semibold">
+                                    Check your upcoming appointments. Real-time mapping is active in the <Link to="/locator" className="text-indigo-650 underline">Locator</Link>.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right Side: Gemini Smart Insight Copilot */}
+                            <div className="space-y-4">
+                              <h4 className="font-bold text-indigo-650 text-sm flex items-center gap-1.5">
+                                <Sparkles className="h-4.5 w-4.5 text-indigo-500 animate-pulse" />
+                                MediFlow AI Wellness Tips
+                              </h4>
+                              
+                              <div className="p-4 bg-gradient-to-br from-indigo-500/5 to-slate-50 border border-indigo-200/20 rounded-xl space-y-2.5 h-[120px] flex flex-col justify-center">
+                                {warnings.length > 0 ? (
+                                  <p className="text-xs text-rose-600 leading-normal font-semibold">
+                                    ⚠️ <b>Interaction Warning:</b> We flagged duplicate medications. Avoid combining them and consult Apollo/Jayashree clinic specialists immediately.
+                                  </p>
+                                ) : medications.length > 0 ? (
+                                  <p className="text-xs text-slate-650 leading-relaxed font-medium">
+                                    💡 <b>Consistency Tip:</b> Logging your {medications.length} active medication(s) at fixed times increases the compliance rate and ensures faster clinical outcomes.
+                                  </p>
+                                ) : (
+                                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                                    💡 <b>Get Started:</b> Upload prescription documents in the <b>Documents Hub</b> to parse automatic reminders and generate clinical pathways.
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       );
                     }
