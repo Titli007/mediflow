@@ -1,0 +1,48 @@
+# Virtual environment (Backend)
+backend/venv/
+backend/env/
+backend/ENV/
+backend/.venv/
+
+# Node dependencies & builds (Frontend)
+frontend/node_modules/
+frontend/dist/
+frontend/.svelte-kit/
+frontend/build/
+
+# Sensitive configuration files (MUST NOT BE COMMITTED)
+backend/.env
+backend/.env.local
+backend/.env.*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# Logs
+*.log
+backend/medical_extraction.log
+backend/logs/
+
+# Uploaded user medical documents
+backend/uploads/
+backend/uploads/medical_docs/
+
+# SQLite databases (local tests)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# IDE settings
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
