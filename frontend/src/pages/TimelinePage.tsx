@@ -5,7 +5,8 @@ import {
   FileText, 
   Calendar, 
   Clock, 
-  RefreshCw 
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 
@@ -19,22 +20,102 @@ interface TimelineEvent {
   description?: string;
 }
 
+const parseBoldText = (text: string) => {
+  const parts = text.split('**');
+  return parts.map((part, i) => {
+    if (i % 2 === 1) {
+      return <strong key={i} className="font-bold text-slate-900">{part}</strong>;
+    }
+    
+    const italicParts = part.split('*');
+    if (italicParts.length > 1) {
+      return (
+        <React.Fragment key={i}>
+          {italicParts.map((subPart, j) => {
+            if (j % 2 === 1) {
+              return <em key={j} className="italic text-slate-650">{subPart}</em>;
+            }
+            return subPart;
+          })}
+        </React.Fragment>
+      );
+    }
+    
+    return part;
+  });
+};
+
+const MarkdownText: React.FC<{ text: string }> = ({ text }) => {
+  if (!text) return null;
+  const lines = text.split('\n');
+  return (
+    <div className="space-y-1">
+      {lines.map((line, index) => {
+        const cleanLine = line.trim();
+        
+        if (cleanLine === '***' || cleanLine === '---' || cleanLine === '___') {
+          return <hr key={index} className="my-3 border-slate-200" />;
+        }
+        
+        const bulletMatch = line.match(/^(\s*)([*\-+])\s+(.*)$/);
+        if (bulletMatch) {
+          const content = bulletMatch[3];
+          return (
+            <li key={index} className="ml-4 list-disc pl-0.5 my-0.5 text-slate-700">
+              {parseBoldText(content)}
+            </li>
+          );
+        }
+        
+        const headerMatch = line.match(/^(#{1,6})\s+(.*)$/);
+        if (headerMatch) {
+          const level = headerMatch[1].length;
+          const content = headerMatch[2];
+          const children = parseBoldText(content);
+          
+          if (level === 1) return <h1 key={index} className="text-lg font-bold mt-3 mb-1 text-slate-800">{children}</h1>;
+          if (level === 2) return <h2 key={index} className="text-base font-bold mt-2 mb-1 text-slate-800">{children}</h2>;
+          if (level === 3) return <h3 key={index} className="text-sm font-bold mt-2 mb-0.5 text-indigo-750">{children}</h3>;
+          return <h4 key={index} className="text-xs font-bold mt-1.5 mb-0.5 text-slate-700">{children}</h4>;
+        }
+        
+        if (cleanLine === '') {
+          return <div key={index} className="h-1.5" />;
+        }
+        
+        return (
+          <p key={index} className="leading-relaxed my-0.5">
+            {parseBoldText(line)}
+          </p>
+        );
+      })}
+    </div>
+  );
+};
+
 export const TimelinePage: React.FC = () => {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [filterType, setFilterType] = useState<'all' | 'document' | 'appointment' | 'reminder'>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchTimeline = async () => {
     setIsLoading(true);
+    setIsLoadingSummary(true);
     setError(null);
     try {
       const response = await apiClient.get('/api/timeline/');
       setEvents(response.data);
+
+      const summaryResponse = await apiClient.get('/api/ai/summary');
+      setSummary(summaryResponse.data.summary);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch timeline feed.');
     } finally {
       setIsLoading(false);
+      setIsLoadingSummary(false);
     }
   };
 
@@ -93,6 +174,26 @@ export const TimelinePage: React.FC = () => {
       </div>
 
       {error && <Alert type="error">{error}</Alert>}
+
+      {/* AI Clinical Summary & Advice Section */}
+      {isLoadingSummary ? (
+        <Card variant="glass" className="p-6 border-indigo-500/10 bg-slate-50/30 flex items-center justify-center py-10 shadow-sm">
+          <div className="flex items-center gap-3 text-slate-400 text-sm animate-pulse">
+            <Sparkles className="h-5 w-5 text-indigo-500 animate-spin" />
+            <span>Analyzing clinical history, generating summary & advice...</span>
+          </div>
+        </Card>
+      ) : summary ? (
+        <Card variant="glass" className="p-7 border-indigo-500/10 bg-gradient-to-br from-indigo-500/5 to-transparent shadow-md glow-violet relative overflow-hidden">
+          <div className="flex items-center gap-2 text-indigo-650 font-bold text-base mb-4">
+            <Sparkles className="h-5 w-5 text-indigo-500 animate-pulse" />
+            AI Clinical Summary & Health Advice
+          </div>
+          <div className="text-slate-600 text-sm leading-relaxed">
+            <MarkdownText text={summary} />
+          </div>
+        </Card>
+      ) : null}
 
       {/* Stepper Timeline Feed */}
       {filteredEvents.length > 0 ? (
