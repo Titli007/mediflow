@@ -25,7 +25,10 @@ def create_reminder(
         start_date=reminder_in.start_date,
         end_date=reminder_in.end_date,
         doses_taken_today=reminder_in.doses_taken_today,
-        last_taken_date=reminder_in.last_taken_date
+        last_taken_date=reminder_in.last_taken_date,
+        dosage=reminder_in.dosage,
+        notes=reminder_in.notes,
+        document_id=reminder_in.document_id
     )
     db.add(db_reminder)
     db.commit()

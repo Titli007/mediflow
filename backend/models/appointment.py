@@ -15,5 +15,7 @@ class Appointment(Base):
     status = Column(String, default="scheduled")  # scheduled, completed, cancelled
     created_at = Column(DateTime, default=datetime.utcnow)
     
+    document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=True)
+    
     # Relationship to user
     owner = relationship("User", backref="appointments")

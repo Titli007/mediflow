@@ -12,6 +12,9 @@ class ReminderBase(BaseModel):
     end_date: Optional[datetime] = None
     doses_taken_today: Optional[int] = 0
     last_taken_date: Optional[datetime] = None
+    dosage: Optional[str] = None
+    notes: Optional[str] = None
+    document_id: Optional[int] = None
 
 class ReminderCreate(ReminderBase):
     pass
@@ -26,6 +29,9 @@ class ReminderUpdate(BaseModel):
     end_date: Optional[datetime] = None
     doses_taken_today: Optional[int] = None
     last_taken_date: Optional[datetime] = None
+    dosage: Optional[str] = None
+    notes: Optional[str] = None
+    document_id: Optional[int] = None
 
 class ReminderResponse(ReminderBase):
     id: int

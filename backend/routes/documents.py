@@ -206,7 +206,10 @@ async def process_document_extraction(
                             frequency=frequency or "daily",
                             is_active=True,
                             start_date=start_date,
-                            end_date=end_date
+                            end_date=end_date,
+                            dosage=dosage,
+                            notes="Extracted automatically from prescription.",
+                            document_id=db_document.id
                         )
                         db.add(new_reminder)
             
@@ -249,7 +252,8 @@ async def process_document_extraction(
                             hospital_name=appt_hosp,
                             appointment_date=appt_date,
                             reason=appt_reason,
-                            status="scheduled"
+                            status="scheduled",
+                            document_id=db_document.id
                         )
                         db.add(new_appt)
             

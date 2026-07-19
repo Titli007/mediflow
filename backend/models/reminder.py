@@ -21,5 +21,10 @@ class Reminder(Base):
     doses_taken_today = Column(Integer, default=0)
     last_taken_date = Column(DateTime, nullable=True)
     
+    # Dynamic medication metadata
+    dosage = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
+    document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=True)
+    
     # Relationship to user
     owner = relationship("User", backref="reminders")
