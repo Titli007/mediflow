@@ -4,6 +4,7 @@ env/
 ENV/
 .venv/
 .env/
+venv/
 
 # Python caching
 __pycache__/
@@ -27,6 +28,9 @@ logs/
 # Uploaded user medical documents
 uploads/
 uploads/medical_docs/
+test_document.txt
+scratch_test.py
+gcp-credentials.json
 
 # SQLite databases (local tests)
 *.db
