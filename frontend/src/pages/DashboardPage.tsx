@@ -3,6 +3,9 @@ import { useAuthStore } from '../store/authStore';
 import { apiClient } from '../api/client';
 import { Card } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
+import { Dialog } from '../components/ui/Dialog';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
 import { 
   FileText, 
   Calendar, 
@@ -19,7 +22,9 @@ import {
   Stethoscope,
   BarChart2,
   Timer,
-  FileHeart
+  FileHeart,
+  PlusCircle,
+  Heart
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -63,31 +68,72 @@ export const DashboardPage: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState<'overview' | 'journey' | 'analytics'>('overview');
   const [journeyData, setJourneyData] = useState<any>(null);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const dashRes = await apiClient.get('/api/dashboard/');
-        setStats(dashRes.data.stats);
-        setMedications(dashRes.data.current_medications || []);
-        setRecentDocs(dashRes.data.recent_documents || []);
-        setUpcomingAppts(dashRes.data.upcoming_appointments || []);
-        setActiveReminders(dashRes.data.active_reminders || []);
-        setBiometricTrends(dashRes.data.biometric_trends || []);
+  // Manual Biometric Logger Modal state
+  const [isLogOpen, setIsLogOpen] = useState(false);
+  const [logHeartRate, setLogHeartRate] = useState('');
+  const [logBloodGlucose, setLogBloodGlucose] = useState('');
+  const [logCholesterol, setLogCholesterol] = useState('');
+  const [logDate, setLogDate] = useState('');
+  const [isLogging, setIsLogging] = useState(false);
+  const [logSuccess, setLogSuccess] = useState<string | null>(null);
+  const [logError, setLogError] = useState<string | null>(null);
 
-        const warningsRes = await apiClient.get('/api/ai/duplicate-medications');
-        if (warningsRes.data.has_warnings) {
-          setWarnings(warningsRes.data.warnings);
-        }
+  const fetchDashboardData = async () => {
+    try {
+      const dashRes = await apiClient.get('/api/dashboard/');
+      setStats(dashRes.data.stats);
+      setMedications(dashRes.data.current_medications || []);
+      setRecentDocs(dashRes.data.recent_documents || []);
+      setUpcomingAppts(dashRes.data.upcoming_appointments || []);
+      setActiveReminders(dashRes.data.active_reminders || []);
+      setBiometricTrends(dashRes.data.biometric_trends || []);
 
-        const journeyRes = await apiClient.get('/api/dashboard/journey-analytics');
-        setJourneyData(journeyRes.data);
-      } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
+      const warningsRes = await apiClient.get('/api/ai/duplicate-medications');
+      if (warningsRes.data.has_warnings) {
+        setWarnings(warningsRes.data.warnings);
+      } else {
+        setWarnings([]);
       }
-    };
 
+      const journeyRes = await apiClient.get('/api/dashboard/journey-analytics');
+      setJourneyData(journeyRes.data);
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+    }
+  };
+
+  useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  const handleSubmitBiometrics = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!logHeartRate && !logBloodGlucose && !logCholesterol) return;
+
+    setIsLogging(true);
+    setLogError(null);
+    try {
+      await apiClient.post('/api/biometrics/', {
+        heart_rate: logHeartRate ? parseFloat(logHeartRate) : undefined,
+        blood_glucose: logBloodGlucose ? parseFloat(logBloodGlucose) : undefined,
+        cholesterol: logCholesterol ? parseFloat(logCholesterol) : undefined,
+        date: logDate ? new Date(logDate).toISOString() : undefined
+      });
+
+      setLogHeartRate('');
+      setLogBloodGlucose('');
+      setLogCholesterol('');
+      setLogDate('');
+      setIsLogOpen(false);
+      setLogSuccess("Biometrics successfully recorded!");
+      setTimeout(() => setLogSuccess(null), 5000);
+      fetchDashboardData();
+    } catch (err: any) {
+      setLogError(err.response?.data?.detail || 'Failed to log biometrics.');
+    } finally {
+      setIsLogging(false);
+    }
+  };
 
   const firstAppt = upcomingAppts.length > 0 ? upcomingAppts[0] : null;
   const nextReminder = activeReminders.length > 0 ? activeReminders[0] : null;
@@ -272,139 +318,253 @@ export const DashboardPage: React.FC = () => {
           {/* Charts & Bento Section */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            {/* Health Trends dynamic SVG chart */}
+            {/* Clinical Biometric Tracker */}
             <div className="lg:col-span-8">
-              <Card variant="default" className="p-8 h-full flex flex-col justify-between">
-                <div>
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-800">Health Trends</h3>
-                      <p className="text-xs text-slate-400 mt-0.5">Biometric logs extracted from patient files</p>
-                    </div>
+              {(() => {
+                const latestHeartRate = [...biometricTrends].reverse().find(t => t.heart_rate !== null)?.heart_rate || null;
+                const latestBloodGlucose = [...biometricTrends].reverse().find(t => t.blood_glucose !== null)?.blood_glucose || null;
+                const latestCholesterol = [...biometricTrends].reverse().find(t => t.cholesterol !== null)?.cholesterol || null;
+
+                const getHeartRateStatus = (val: number | null) => {
+                  if (val === null) return { label: 'No Data', color: 'bg-slate-100 text-slate-500 border-slate-200/50' };
+                  if (val < 60) return { label: 'Low (<60)', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20' };
+                  if (val <= 100) return { label: 'Normal (60-100)', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' };
+                  return { label: 'High (>100)', color: 'bg-rose-500/10 text-rose-600 border-rose-500/20' };
+                };
+
+                const getBloodGlucoseStatus = (val: number | null) => {
+                  if (val === null) return { label: 'No Data', color: 'bg-slate-100 text-slate-500 border-slate-200/50' };
+                  if (val < 70) return { label: 'Low (<70)', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20' };
+                  if (val <= 100) return { label: 'Fasting Normal', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' };
+                  if (val < 126) return { label: 'Prediabetes (100-125)', color: 'bg-amber-500/10 text-amber-650 border-amber-500/20' };
+                  return { label: 'High (>=126)', color: 'bg-rose-500/10 text-rose-600 border-rose-500/20' };
+                };
+
+                const getCholesterolStatus = (val: number | null) => {
+                  if (val === null) return { label: 'No Data', color: 'bg-slate-100 text-slate-500 border-slate-200/50' };
+                  if (val < 200) return { label: 'Optimal (<200)', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' };
+                  if (val < 240) return { label: 'Borderline (200-239)', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20' };
+                  return { label: 'High (>=240)', color: 'bg-rose-500/10 text-rose-600 border-rose-500/20' };
+                };
+
+                const hrStatus = getHeartRateStatus(latestHeartRate);
+                const bgStatus = getBloodGlucoseStatus(latestBloodGlucose);
+                const cholStatus = getCholesterolStatus(latestCholesterol);
+
+                return (
+                  <Card variant="default" className="p-8 h-full flex flex-col justify-between space-y-6">
                     
-                    {/* Metric selector tabs */}
-                    <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl border border-slate-200/50 self-start md:self-auto text-[10px]">
-                      <button 
-                        onClick={() => setSelectedMetric('heart_rate')}
-                        className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                          selectedMetric === 'heart_rate' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-405 hover:text-slate-600'
-                        }`}
+                    {/* Header */}
+                    <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-800">Biometric Clinical Vitalities</h3>
+                        <p className="text-xs text-slate-400 mt-0.5">Real-time vitals and manual health logs</p>
+                      </div>
+                      
+                      {logSuccess && (
+                        <span className="text-xs text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full animate-fade">
+                          {logSuccess}
+                        </span>
+                      )}
+
+                      <Button 
+                        size="sm"
+                        onClick={() => setIsLogOpen(true)}
+                        className="flex items-center gap-1.5 cursor-pointer text-xs font-bold"
                       >
-                        Heart Rate (bpm)
-                      </button>
-                      <button 
-                        onClick={() => setSelectedMetric('blood_glucose')}
-                        className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                          selectedMetric === 'blood_glucose' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-405 hover:text-slate-600'
-                        }`}
-                      >
-                        Blood Glucose (mg/dL)
-                      </button>
-                      <button 
-                        onClick={() => setSelectedMetric('cholesterol')}
-                        className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                          selectedMetric === 'cholesterol' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-405 hover:text-slate-600'
-                        }`}
-                      >
-                        Cholesterol (mg/dL)
-                      </button>
+                        <PlusCircle className="h-4 w-4" />
+                        Log Vitals Manually
+                      </Button>
                     </div>
-                  </div>
 
-                  {/* Dynamic Chart Container */}
-                  {(() => {
-                    const dataPoints = biometricTrends.filter(t => t[selectedMetric] !== null);
-                    if (dataPoints.length === 0) {
-                      return (
-                        <div className="w-full bg-slate-50 border border-slate-200/50 rounded-2xl p-6 relative overflow-hidden group">
-                          {/* Background Glow */}
-                          <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/5 via-transparent to-emerald-500/5 opacity-50"></div>
-                          
-                          <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Left Side: Daily Wellness Actions */}
-                            <div className="space-y-4">
-                              <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                                <CheckCircle2 className="h-4.5 w-4.5 text-indigo-600" />
-                                Your Daily Clinical Checklist
-                              </h4>
-                              <div className="space-y-2.5">
-                                <div className="flex gap-2.5 items-start p-3 bg-white rounded-xl border border-slate-100 shadow-sm hover:scale-[1.01] transition duration-200">
-                                  <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 h-5 w-5 rounded-full flex items-center justify-center shrink-0">1</span>
-                                  <p className="text-xs text-slate-650 leading-relaxed font-semibold">
-                                    Track compliance checklist inside the <Link to="/reminders" className="text-indigo-650 underline">Reminders Hub</Link> to log taken doses.
-                                  </p>
-                                </div>
-                                <div className="flex gap-2.5 items-start p-3 bg-white rounded-xl border border-slate-100 shadow-sm hover:scale-[1.01] transition duration-200">
-                                  <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 h-5 w-5 rounded-full flex items-center justify-center shrink-0">2</span>
-                                  <p className="text-xs text-slate-650 leading-relaxed font-semibold">
-                                    Check your upcoming appointments. Real-time mapping is active in the <Link to="/locator" className="text-indigo-650 underline">Locator</Link>.
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Right Side: Gemini Smart Insight Copilot */}
-                            <div className="space-y-4">
-                              <h4 className="font-bold text-indigo-650 text-sm flex items-center gap-1.5">
-                                <Sparkles className="h-4.5 w-4.5 text-indigo-500 animate-pulse" />
-                                MediFlow AI Wellness Tips
-                              </h4>
-                              
-                              <div className="p-4 bg-gradient-to-br from-indigo-500/5 to-slate-50 border border-indigo-200/20 rounded-xl space-y-2.5 h-[120px] flex flex-col justify-center">
-                                {warnings.length > 0 ? (
-                                  <p className="text-xs text-rose-600 leading-normal font-semibold">
-                                    ⚠️ <b>Interaction Warning:</b> We flagged duplicate medications. Avoid combining them and consult Apollo/Jayashree clinic specialists immediately.
-                                  </p>
-                                ) : medications.length > 0 ? (
-                                  <p className="text-xs text-slate-650 leading-relaxed font-medium">
-                                    💡 <b>Consistency Tip:</b> Logging your {medications.length} active medication(s) at fixed times increases the compliance rate and ensures faster clinical outcomes.
-                                  </p>
-                                ) : (
-                                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                                    💡 <b>Get Started:</b> Upload prescription documents in the <b>Documents Hub</b> to parse automatic reminders and generate clinical pathways.
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
+                    {/* Vitals Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      
+                      {/* Heart Rate Card */}
+                      <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-xl space-y-3 shadow-sm hover:scale-[1.01] transition duration-200">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Heart Rate</span>
+                          <Activity className="h-4.5 w-4.5 text-indigo-500" />
                         </div>
-                      );
-                    }
+                        <div>
+                          <p className="text-2xl font-black text-slate-850">
+                            {latestHeartRate !== null ? `${latestHeartRate} bpm` : '--'}
+                          </p>
+                          <span className={`inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md border mt-2 ${hrStatus.color}`}>
+                            {hrStatus.label}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">
+                          Target Range: 60 - 100 bpm (resting)
+                        </p>
+                      </div>
 
-                    const values = dataPoints.map(d => Number(d[selectedMetric]));
-                    const maxVal = Math.max(...values, 100);
-                    const minVal = Math.min(...values, 0);
-                    const range = maxVal - minVal || 1;
+                      {/* Blood Glucose Card */}
+                      <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-xl space-y-3 shadow-sm hover:scale-[1.01] transition duration-200">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Blood Glucose</span>
+                          <Heart className="h-4.5 w-4.5 text-rose-500 fill-rose-500/20" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-black text-slate-850">
+                            {latestBloodGlucose !== null ? `${latestBloodGlucose} mg/dL` : '--'}
+                          </p>
+                          <span className={`inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md border mt-2 ${bgStatus.color}`}>
+                            {bgStatus.label}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">
+                          Fasting Target: 70 - 100 mg/dL
+                        </p>
+                      </div>
 
-                    return (
-                      <div className="w-full h-64 bg-slate-50 border border-slate-200/50 rounded-2xl flex items-end p-6 gap-6 relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-gradient-to-t from-indigo-500/5 to-transparent opacity-30"></div>
-                        {dataPoints.slice(-10).map((pt, idx) => {
-                          const val = pt[selectedMetric];
-                          const pct = ((val - minVal) / range) * 70 + 20; // scale between 20% and 90%
+                      {/* Cholesterol Card */}
+                      <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-xl space-y-3 shadow-sm hover:scale-[1.01] transition duration-200">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Cholesterol</span>
+                          <FileHeart className="h-4.5 w-4.5 text-indigo-600" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-black text-slate-850">
+                            {latestCholesterol !== null ? `${latestCholesterol} mg/dL` : '--'}
+                          </p>
+                          <span className={`inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md border mt-2 ${cholStatus.color}`}>
+                            {cholStatus.label}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">
+                          Healthy Target: &lt; 200 mg/dL
+                        </p>
+                      </div>
+
+                    </div>
+
+                    {/* Historical Trends Chart Section */}
+                    <div className="pt-4 border-t border-slate-100">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                        <div>
+                          <h4 className="font-bold text-slate-700 text-xs uppercase tracking-wider">Historical Trend Metrics</h4>
+                        </div>
+                        
+                        {/* Selector Tabs */}
+                        <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl border border-slate-200/50 text-[9px]">
+                          <button 
+                            onClick={() => setSelectedMetric('heart_rate')}
+                            className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer ${
+                              selectedMetric === 'heart_rate' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-405 hover:text-slate-650'
+                            }`}
+                          >
+                            Heart Rate
+                          </button>
+                          <button 
+                            onClick={() => setSelectedMetric('blood_glucose')}
+                            className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer ${
+                              selectedMetric === 'blood_glucose' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-405 hover:text-slate-650'
+                            }`}
+                          >
+                            Blood Glucose
+                          </button>
+                          <button 
+                            onClick={() => setSelectedMetric('cholesterol')}
+                            className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer ${
+                              selectedMetric === 'cholesterol' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-405 hover:text-slate-650'
+                            }`}
+                          >
+                            Cholesterol
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Chart Container */}
+                      {(() => {
+                        const dataPoints = biometricTrends.filter(t => t[selectedMetric] !== null);
+                        if (dataPoints.length === 0) {
                           return (
-                            <div key={idx} className="flex-1 flex flex-col items-center gap-2 group/bar cursor-pointer h-full justify-end">
-                              <div className="text-[10px] font-bold text-indigo-600 opacity-0 group-hover/bar:opacity-100 transition-opacity duration-200 mb-1">
-                                {val}
-                              </div>
-                              <div 
-                                className="w-full bg-indigo-600/10 hover:bg-indigo-600/30 border-t border-indigo-500/30 rounded-t-lg transition-all duration-500 relative" 
-                                style={{ height: `${pct}%` }}
-                                title={`${pt.document_name}: ${val} on ${pt.date}`}
-                              >
-                                <div className="absolute -top-1 left-0 right-0 h-1 bg-indigo-500 rounded-full shadow-sm shadow-indigo-500/50"></div>
-                              </div>
-                              <div className="text-[9px] text-slate-400 font-bold truncate max-w-full">
-                                {new Date(pt.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                            <div className="w-full bg-slate-50 border border-slate-200/50 rounded-2xl p-6 relative overflow-hidden group">
+                              <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/5 via-transparent to-emerald-500/5 opacity-50"></div>
+                              <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-4">
+                                  <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                                    <CheckCircle2 className="h-4.5 w-4.5 text-indigo-600" />
+                                    Your Daily Clinical Checklist
+                                  </h4>
+                                  <div className="space-y-2.5">
+                                    <div className="flex gap-2.5 items-start p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+                                      <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 h-5 w-5 rounded-full flex items-center justify-center shrink-0">1</span>
+                                      <p className="text-xs text-slate-650 leading-relaxed font-semibold">
+                                        Track compliance checklist inside the <Link to="/reminders" className="text-indigo-650 underline">Reminders Hub</Link> to log taken doses.
+                                      </p>
+                                    </div>
+                                    <div className="flex gap-2.5 items-start p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+                                      <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 h-5 w-5 rounded-full flex items-center justify-center shrink-0">2</span>
+                                      <p className="text-xs text-slate-650 leading-relaxed font-semibold">
+                                        Check your upcoming appointments. Real-time mapping is active in the <Link to="/locator" className="text-indigo-650 underline">Locator</Link>.
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="space-y-4">
+                                  <h4 className="font-bold text-indigo-650 text-sm flex items-center gap-1.5">
+                                    <Sparkles className="h-4.5 w-4.5 text-indigo-500 animate-pulse" />
+                                    MediFlow AI Wellness Tips
+                                  </h4>
+                                  <div className="p-4 bg-gradient-to-br from-indigo-500/5 to-slate-50 border border-indigo-200/20 rounded-xl space-y-2.5 h-[120px] flex flex-col justify-center">
+                                    {warnings.length > 0 ? (
+                                      <p className="text-xs text-rose-600 leading-normal font-semibold">
+                                        ⚠️ <b>Interaction Warning:</b> We flagged duplicate medications. Avoid combining them and consult Apollo/Jayashree clinic specialists immediately.
+                                      </p>
+                                    ) : medications.length > 0 ? (
+                                      <p className="text-xs text-slate-650 leading-relaxed font-medium">
+                                        💡 <b>Consistency Tip:</b> Logging your {medications.length} active medication(s) at fixed times increases the compliance rate.
+                                      </p>
+                                    ) : (
+                                      <p className="text-xs text-slate-650 leading-relaxed font-medium">
+                                        💡 <b>Get Started:</b> Log your first readings using the <b>Log Vitals Manually</b> button to plot a trend chart.
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           );
-                        })}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </Card>
+                        }
+
+                        const values = dataPoints.map(d => Number(d[selectedMetric]));
+                        const maxVal = Math.max(...values, 100);
+                        const minVal = Math.min(...values, 0);
+                        const range = maxVal - minVal || 1;
+
+                        return (
+                          <div className="w-full h-48 bg-slate-50 border border-slate-200/50 rounded-2xl flex items-end p-6 gap-6 relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-gradient-to-t from-indigo-500/5 to-transparent opacity-30"></div>
+                            {dataPoints.slice(-10).map((pt, idx) => {
+                              const val = pt[selectedMetric];
+                              const pct = ((val - minVal) / range) * 60 + 20; // scale between 20% and 80%
+                              return (
+                                <div key={idx} className="flex-1 flex flex-col items-center gap-2 group/bar cursor-pointer h-full justify-end">
+                                  <div className="text-[10px] font-bold text-indigo-650 opacity-0 group-hover/bar:opacity-100 transition-opacity duration-200 mb-1">
+                                    {val}
+                                  </div>
+                                  <div 
+                                    className="w-full bg-indigo-650/15 hover:bg-indigo-600/30 border-t border-indigo-500/30 rounded-t-lg transition-all duration-500 relative" 
+                                    style={{ height: `${pct}%` }}
+                                    title={`${pt.document_name}: ${val} on ${pt.date}`}
+                                  >
+                                    <div className="absolute -top-1 left-0 right-0 h-1 bg-indigo-500 rounded-full shadow-sm shadow-indigo-500/50"></div>
+                                  </div>
+                                  <div className="text-[9px] text-slate-400 font-bold truncate max-w-full">
+                                    {new Date(pt.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </Card>
+                );
+              })()}
             </div>
 
             {/* Extraction Telemetry */}
@@ -825,6 +985,66 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Manual Biometrics Logging Dialog */}
+      <Dialog 
+        isOpen={isLogOpen} 
+        onClose={() => setIsLogOpen(false)} 
+        title="Log Vitals & Biometrics Manually"
+      >
+        <form onSubmit={handleSubmitBiometrics} className="space-y-5">
+          {logError && <Alert type="error">{logError}</Alert>}
+          
+          <div className="space-y-4">
+            <Input 
+              label="Heart Rate (BPM)" 
+              type="number"
+              placeholder="e.g. 72"
+              value={logHeartRate}
+              onChange={(e) => setLogHeartRate(e.target.value)}
+            />
+
+            <Input 
+              label="Blood Glucose (mg/dL)" 
+              type="number"
+              placeholder="e.g. 95"
+              value={logBloodGlucose}
+              onChange={(e) => setLogBloodGlucose(e.target.value)}
+            />
+
+            <Input 
+              label="Total Cholesterol (mg/dL)" 
+              type="number"
+              placeholder="e.g. 185"
+              value={logCholesterol}
+              onChange={(e) => setLogCholesterol(e.target.value)}
+            />
+
+            <Input 
+              label="Reading Date & Time (Optional)" 
+              type="datetime-local"
+              value={logDate}
+              onChange={(e) => setLogDate(e.target.value)}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <Button 
+              type="button" 
+              variant="secondary"
+              onClick={() => setIsLogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit"
+              isLoading={isLogging}
+            >
+              Save Vital Readings
+            </Button>
+          </div>
+        </form>
+      </Dialog>
     </div>
   );
 };

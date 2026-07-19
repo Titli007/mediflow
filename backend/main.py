@@ -15,6 +15,7 @@ from routes.timeline import router as timeline_router
 from routes.dashboard import router as dashboard_router
 from routes.ai import router as ai_router
 from routes.specialist import router as specialist_router
+from routes.biometrics import router as biometrics_router
 import database_monitor
 
 logger = get_logger(__name__)
@@ -53,6 +54,7 @@ app.include_router(timeline_router)
 app.include_router(dashboard_router)
 app.include_router(ai_router)
 app.include_router(specialist_router)
+app.include_router(biometrics_router)
 
 app.include_router(reminder_router)
 app.include_router(timeline_router)

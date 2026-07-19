@@ -5,6 +5,7 @@ from models.user import User
 from models.document import Document, ExtractionStatus, DocumentType
 from models.appointment import Appointment
 from models.reminder import Reminder
+from models.biometric import BiometricLog
 from routes.auth import get_current_user
 from typing import Dict, Any, List
 from datetime import datetime
@@ -113,6 +114,25 @@ def get_user_dashboard(
             except Exception:
                 pass
     
+    # Fetch manual biometric logs
+    manual_logs = db.query(BiometricLog).filter(
+        BiometricLog.user_id == current_user.id
+    ).all()
+
+    for log in manual_logs:
+        if log.heart_rate is not None or log.blood_glucose is not None or log.cholesterol is not None:
+            date_str = log.date.strftime("%Y-%m-%d")
+            biometric_trends.append({
+                "date": date_str,
+                "heart_rate": log.heart_rate,
+                "blood_pressure_systolic": None,
+                "blood_pressure_diastolic": None,
+                "blood_glucose": log.blood_glucose,
+                "hba1c": None,
+                "cholesterol": log.cholesterol,
+                "document_name": "Manual Entry"
+            })
+
     # Sort biometric trends by date ascending
     biometric_trends.sort(key=lambda x: x["date"])
                 
