@@ -9,6 +9,7 @@ import { AppointmentsPage } from './pages/AppointmentsPage';
 import { RemindersPage } from './pages/RemindersPage';
 import { TimelinePage } from './pages/TimelinePage';
 import { AIConsultPage } from './pages/AIConsultPage';
+import { FacilitiesPage } from './pages/FacilitiesPage';
 import { 
   Activity, 
   LayoutDashboard, 
@@ -17,7 +18,8 @@ import {
   Clock, 
   Sparkles, 
   LogOut, 
-  ChevronRight
+  ChevronRight,
+  MapPin
 } from 'lucide-react';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -41,6 +43,7 @@ const AppLayout: React.FC = () => {
     { to: '/reminders', label: 'Reminders', icon: Clock },
     { to: '/timeline', label: 'Timeline', icon: Clock },
     { to: '/ai-consult', label: 'AI Consult', icon: Sparkles },
+    { to: '/locator', label: 'Facilities Locator', icon: MapPin },
   ];
 
   return (
@@ -140,6 +143,7 @@ const AppLayout: React.FC = () => {
             <Route path="/reminders" element={<RemindersPage />} />
             <Route path="/timeline" element={<TimelinePage />} />
             <Route path="/ai-consult" element={<AIConsultPage />} />
+            <Route path="/locator" element={<FacilitiesPage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
