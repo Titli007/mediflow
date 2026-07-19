@@ -246,8 +246,13 @@ export const DashboardPage: React.FC = () => {
               <div className="px-6 pb-6">
                 <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Current Medicines</h3>
                 <div className="mt-3 flex items-center justify-between">
-                  <div className="text-2xl font-bold text-slate-800">
-                    {journeyData?.analytics?.compliance_rate ? `${journeyData.analytics.compliance_rate}% compliance` : '100% compliance'}
+                  <div className="text-slate-800 font-bold">
+                    <span className="text-xl md:text-2xl block leading-none">
+                      {journeyData?.analytics?.compliance_rate !== undefined && journeyData.analytics.compliance_rate !== null 
+                        ? `${journeyData.analytics.compliance_rate}%` 
+                        : '100%'}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-bold block mt-1 uppercase tracking-wide">Compliance</span>
                   </div>
                   <div className="relative h-11 w-11 shrink-0">
                     <svg className="h-full w-full transform -rotate-90">
