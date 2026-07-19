@@ -2,6 +2,7 @@ import os
 import json
 import requests
 from typing import Optional, Dict
+from config.settings import GEMINI_MODEL
 from config.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -11,7 +12,7 @@ def call_gemini(prompt: str) -> str:
     if not api_key:
         raise ValueError("GEMINI_API_KEY environment variable is not set")
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={api_key}"
         headers = {"Content-Type": "application/json"}
         payload = {
             "contents": [

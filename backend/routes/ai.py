@@ -4,6 +4,7 @@ from config.database import get_db
 from models.user import User
 from models.document import Document, ExtractionStatus
 from routes.auth import get_current_user
+from config.settings import GEMINI_MODEL
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import os
@@ -26,7 +27,7 @@ def call_gemini(prompt: str) -> Optional[str]:
     if not api_key:
         return None
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={api_key}"
         headers = {"Content-Type": "application/json"}
         payload = {
             "contents": [
